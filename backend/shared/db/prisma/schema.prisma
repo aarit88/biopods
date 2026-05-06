@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OPERATOR
+  OBSERVER
+}
+
+enum PodHealth {
+  HEALTHY
+  WARNING
+  DANGER
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(OBSERVER)
+  sessions  Session[]
+  createdAt DateTime @default(now())
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  refreshToken String   @unique
+  expiresAt    DateTime
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model Cluster {
+  id        String   @id @default(uuid())
+  name      String
+  kubeconfig String  
+  nodes     Node[]
+  pods      Pod[]
+}
+
+model Node {
+  id        String   @id @default(uuid())
+  clusterId String
+  name      String
+  status    String   
+  cluster   Cluster  @relation(fields: [clusterId], references: [id])
+}
+
+model Pod {
+  id          String   @id @default(uuid())
+  clusterId   String
+  name        String
+  namespace   String
+  health      PodHealth @default(HEALTHY)
+  cluster     Cluster   @relation(fields: [clusterId], references: [id])
+  dangerEvents DangerEvent[]
+}
+
+model DangerEvent {
+  id        String   @id @default(uuid())
+  podId     String
+  score     Float
+  label     PodHealth
+  timestamp DateTime @default(now())
+  pod       Pod      @relation(fields: [podId], references: [id])
+  verifiedThreats VerifiedThreat[]
+}
+
+model VerifiedThreat {
+  id            String   @id @default(uuid())
+  dangerEventId String
+  confidence    Float
+  actionTaken   String?
+  threatType    String   
+  timestamp     DateTime @default(now())
+  dangerEvent   DangerEvent @relation(fields: [dangerEventId], references: [id])
+}
+
+model Antibody {
+  id             String   @id @default(uuid())
+  threatPattern  String   
+  actionPlan     Json     
+  affinity       Float
+  createdAt      DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  details   Json
+  timestamp DateTime @default(now())
+}

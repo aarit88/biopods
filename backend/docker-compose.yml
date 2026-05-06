@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  nats:
+    image: nats:latest
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: biopods
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8000:8000"
+
+  # BioPods Services (Example)
+  api-gateway:
+    build: 
+      context: .
+      dockerfile: deploy/docker/api-gateway.Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://admin:password@postgres:5432/biopods
+      - NATS_URL=nats://nats:4222
+      - JWT_SECRET=super-secret-biopods-key
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - nats
+
+  visualization-hub:
+    build:
+      context: .
+      dockerfile: deploy/docker/visualization-hub.Dockerfile
+    environment:
+      - NATS_URL=nats://nats:4222
+    ports:
+      - "3001:3001"
+    depends_on:
+      - nats

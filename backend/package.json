@@ -1,0 +1,20 @@
+{
+  "name": "biopods-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bio-inspired immune system for Kubernetes - Backend Monorepo",
+  "workspaces": [
+    "services/*",
+    "shared/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w @biopods/api-gateway\" \"npm run dev -w @biopods/visualization-hub\" \"npm run dev -w @biopods/telemetry-ingest\" \"npm run dev -w @biopods/self-heal\"",
+    "build": "npm run build -w services/*",
+    "db:generate": "npm run generate -w shared/db",
+    "db:push": "npm run push -w shared/db"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  }
+}
