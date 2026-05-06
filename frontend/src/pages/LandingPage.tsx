@@ -2,7 +2,8 @@ import React, { useEffect } from 'react';
 import { BioCard } from '../components/ui/BioCard';
 import { apiService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-import { motion, Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
+import type { Variants } from 'framer-motion';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();

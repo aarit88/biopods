@@ -21,7 +21,7 @@ cd backend
 npm install
 
 # Start the API Gateway & Signal Core
-npm start
+npm run dev
 ```
 *The backend will be live at `http://localhost:3001`*
 
