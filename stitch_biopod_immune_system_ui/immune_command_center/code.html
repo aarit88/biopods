@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BIOPODS | Immune System Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            backdrop-filter: blur(20px);
+            background: rgba(16, 19, 25, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .neural-line {
+            stroke-dasharray: 4;
+            stroke: rgba(0, 230, 57, 0.3);
+        }
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(0, 230, 57, 0.2), transparent);
+            pointer-events: none;
+        }
+        .holographic-glow {
+            box-shadow: 0 0 20px rgba(0, 230, 57, 0.1);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-high": "#272a30",
+                      "on-secondary-container": "#00686f",
+                      "primary-container": "#05070a",
+                      "on-background": "#e1e2ea",
+                      "on-primary-fixed-variant": "#44474b",
+                      "surface-container-lowest": "#0b0e14",
+                      "tertiary-fixed-dim": "#00e639",
+                      "tertiary-container": "#000900",
+                      "on-error-container": "#ffdad6",
+                      "on-primary-container": "#76787d",
+                      "on-tertiary-container": "#008c1f",
+                      "surface-container": "#1d2026",
+                      "inverse-surface": "#e1e2ea",
+                      "primary": "#c5c6cb",
+                      "on-tertiary-fixed-variant": "#00530e",
+                      "surface-dim": "#101319",
+                      "surface-tint": "#c5c6cb",
+                      "on-surface-variant": "#c6c6ca",
+                      "on-surface": "#e1e2ea",
+                      "surface-variant": "#32353b",
+                      "on-tertiary": "#003907",
+                      "secondary-fixed-dim": "#00dbe9",
+                      "on-secondary-fixed": "#002022",
+                      "surface-container-highest": "#32353b",
+                      "on-error": "#690005",
+                      "primary-fixed": "#e1e2e7",
+                      "tertiary-fixed": "#72ff70",
+                      "secondary": "#d3fbff",
+                      "on-primary": "#2e3134",
+                      "tertiary": "#00e639",
+                      "on-tertiary-fixed": "#002203",
+                      "on-secondary": "#00363a",
+                      "outline-variant": "#45474a",
+                      "surface-container-low": "#191c22",
+                      "inverse-primary": "#5c5e63",
+                      "secondary-fixed": "#7df4ff",
+                      "secondary-container": "#00eefc",
+                      "inverse-on-surface": "#2d3037",
+                      "outline": "#8f9195",
+                      "background": "#101319",
+                      "surface-bright": "#363940",
+                      "on-primary-fixed": "#191c1f",
+                      "on-secondary-fixed-variant": "#004f54",
+                      "error": "#ffb4ab",
+                      "surface": "#101319",
+                      "error-container": "#93000a",
+                      "primary-fixed-dim": "#c5c6cb"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "16px",
+                      "container-padding": "32px",
+                      "panel-gap": "24px",
+                      "unit": "8px"
+              },
+              "fontFamily": {
+                      "h1": ["Space Grotesk"],
+                      "label-mono": ["Inter"],
+                      "h2": ["Space Grotesk"],
+                      "body-m": ["Inter"],
+                      "metric-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "h1": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-mono": ["12px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                      "h2": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "body-m": ["16px", {"lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400"}],
+                      "metric-lg": ["40px", {"lineHeight": "1", "letterSpacing": "-0.04em", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-background font-body-m min-h-screen overflow-x-hidden selection:bg-tertiary/30">
+<!-- Top Navigation Shell -->
+<header class="docked full-width top-0 sticky z-50 flex justify-between items-center w-full px-container-padding py-4 border-b border-white/5 bg-gradient-to-r from-surface-container-low via-surface-container to-surface-container-low backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
+<div class="flex items-center gap-4">
+<img class="h-10 w-10" data-alt="A futuristic, cinematic logo for 'BIOPODS'. The icon is a stylized biological cell or pod with glowing neural pathways and cybernetic circuits integrated into its membrane. Use electric cyan and bio-green neon colors against a deep space black background. High-tech, minimal, high-end AI brand identity. flat vector style with subtle glows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCz6Yz1m9lI8-Tt27siGPr3rYkRUij3T-JpCHbUkT4mkLN0jS6-xTxUzE1H7KfVELwV9UUhCZoJ0z-iDflTZacsC4GTtSOJ-L1DHVWM1nBX0YTA6ZFH12ynaYQ3IWIanScviR5fXFmlCYAg4111vCGxlenpY1ZWg9--7sD0mBmyOO2ZWt7gogOGJdi-s-2feiDnwL7wmH5L6n_8R_rvE_5SAZZs0W5zGzXqyf5HkoWqFIH-ZYX8mgqbcw1Bm8CfvClWhJoeqmvx7sY"/>
+<span class="font-h2 text-h2 font-bold text-tertiary drop-shadow-[0_0_8px_rgba(0,230,57,0.5)] uppercase tracking-tight">BIOPODS</span>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-on-surface-variant font-body-m hover:text-tertiary hover:drop-shadow-[0_0_5px_rgba(0,230,57,0.8)] transition-all duration-300" href="#">Cluster Status</a>
+<a class="text-tertiary border-b-2 border-tertiary pb-1 hover:text-tertiary hover:drop-shadow-[0_0_5px_rgba(0,230,57,0.8)] transition-all duration-300" href="#">Neural Map</a>
+<a class="text-on-surface-variant font-body-m hover:text-tertiary hover:drop-shadow-[0_0_5px_rgba(0,230,57,0.8)] transition-all duration-300" href="#">Immune Logs</a>
+</nav>
+<div class="flex items-center gap-6">
+<button class="bg-tertiary/10 border border-tertiary/50 text-tertiary px-6 py-2 rounded-full font-label-mono uppercase hover:bg-tertiary/20 active:scale-95 transition-all">
+                Deploy Antibody
+            </button>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<span class="material-symbols-outlined hover:text-tertiary cursor-pointer transition-colors" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined hover:text-tertiary cursor-pointer transition-colors" data-icon="settings">settings</span>
+<div class="w-10 h-10 rounded-full border border-tertiary/30 p-0.5">
+<img alt="Bio-Security Officer Avatar" class="rounded-full w-full h-full object-cover" data-alt="A close-up portrait of a high-ranking bio-security officer wearing a futuristic tactical interface headset. The lighting is cold and clinical, with subtle green data reflections on their skin. The background is a blurred high-tech lab environment with glowing server racks. Cinematic sci-fi aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXQLppjQbpFgzNBm3X2DNk7HdsPTmhh6hTybZDK_nLl0x4_sUj6gsBVbdzPHxwn8MEETlYq7rakWsCt2YGHbB3cHRAe3z4NjEDv_dbO8qYzBxc2Ar0_LL0JFTEcfUF4W0JYLiCT0eLGDrtae_7PFr93nJkkW_QEWkz_QJPBcfYB_eS2bC7epYZegXn16QdRapcuDFRBqYvpLPFAxkCxY7UmMX8Rb6WdSs6zktGdqFy96iQI0TV48WWQMV--JXg0CFx7TvZ7yBdfzI"/>
+</div>
+</div>
+</div>
+</header>
+<div class="flex">
+<!-- Side Navigation Shell -->
+<aside class="docked left-0 h-[calc(100vh-72px)] w-64 sticky hidden lg:flex flex-col py-gutter z-40 border-r border-white/10 bg-surface-container-lowest/80 backdrop-blur-2xl shadow-2xl">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3 p-3 glass-panel rounded-xl">
+<div class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></div>
+<div>
+<p class="font-label-mono text-[10px] text-on-surface-variant uppercase">Immune Core</p>
+<p class="font-bold text-tertiary text-sm">Vitals: Optimal</p>
+</div>
+</div>
+</div>
+<nav class="flex-grow flex flex-col gap-1">
+<a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/20 flex items-center gap-4 px-6 py-4 transition-all hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span class="font-label-mono uppercase">Neural Spine</span>
+</a>
+<a class="bg-tertiary-container/30 text-tertiary border-r-4 border-tertiary flex items-center gap-4 px-6 py-4 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="healing" data-weight="fill" style="font-variation-settings: 'FILL' 1;">healing</span>
+<span class="font-label-mono uppercase">Antibodies</span>
+</a>
+<a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/20 flex items-center gap-4 px-6 py-4 transition-all hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="biotech">biotech</span>
+<span class="font-label-mono uppercase">T-Cell HUD</span>
+</a>
+<a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/20 flex items-center gap-4 px-6 py-4 transition-all hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-label-mono uppercase">Mutation Log</span>
+</a>
+<a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/20 flex items-center gap-4 px-6 py-4 transition-all hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="schema">schema</span>
+<span class="font-label-mono uppercase">Bio-Settings</span>
+</a>
+</nav>
+<div class="px-6 mt-auto flex flex-col gap-4">
+<button class="w-full py-4 glass-panel border-error/30 text-error font-label-mono uppercase hover:bg-error/10 transition-colors">
+                    Purge Threats
+                </button>
+<div class="flex justify-between text-on-surface-variant">
+<a class="flex items-center gap-2 text-[10px] uppercase font-label-mono hover:text-tertiary" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="help">help</span> Help
+                    </a>
+<a class="flex items-center gap-2 text-[10px] uppercase font-label-mono hover:text-tertiary" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="description">description</span> Docs
+                    </a>
+</div>
+</div>
+</aside>
+<!-- Main Command Canvas -->
+<main class="flex-grow p-container-padding">
+<!-- Hero Grid: Living Kubernetes Organism & Health Score -->
+<div class="grid grid-cols-12 gap-panel-gap">
+<!-- Central Visualization (The Kubernetes Organism) -->
+<div class="col-span-12 xl:col-span-8 glass-panel rounded-2xl relative overflow-hidden min-h-[600px] flex items-center justify-center p-8">
+<div class="scan-line"></div>
+<!-- Neural Grid Background Layer -->
+<div class="absolute inset-0 opacity-20 pointer-events-none">
+<svg class="w-full h-full" viewbox="0 0 800 600">
+<circle class="neural-line" cx="400" cy="300" fill="none" r="100"></circle>
+<circle class="neural-line" cx="400" cy="300" fill="none" r="200"></circle>
+<line class="neural-line" x1="400" x2="100" y1="300" y2="100"></line>
+<line class="neural-line" x1="400" x2="700" y1="300" y2="100"></line>
+<line class="neural-line" x1="400" x2="100" y1="300" y2="500"></line>
+<line class="neural-line" x1="400" x2="700" y1="300" y2="500"></line>
+</svg>
+</div>
+<!-- Living Pod Nodes -->
+<div class="relative z-10 w-full h-full flex items-center justify-center">
+<div class="grid grid-cols-3 gap-16">
+<!-- Pod 1 -->
+<div class="flex flex-col items-center gap-3">
+<div class="w-24 h-24 rounded-full glass-panel border-tertiary flex items-center justify-center shadow-[0_0_30px_rgba(0,230,57,0.2)]">
+<span class="material-symbols-outlined text-tertiary text-4xl" data-icon="biotech">biotech</span>
+</div>
+<span class="font-label-mono text-[10px] text-tertiary">CORE_POD_01</span>
+</div>
+<!-- Pod 2 - Warning -->
+<div class="flex flex-col items-center gap-3">
+<div class="w-32 h-32 rounded-full glass-panel border-error flex items-center justify-center shadow-[0_0_30px_rgba(255,180,171,0.2)] animate-pulse">
+<span class="material-symbols-outlined text-error text-5xl" data-icon="coronavirus">coronavirus</span>
+</div>
+<span class="font-label-mono text-[10px] text-error">INFECTED_04</span>
+</div>
+<!-- Pod 3 -->
+<div class="flex flex-col items-center gap-3">
+<div class="w-24 h-24 rounded-full glass-panel border-secondary flex items-center justify-center shadow-[0_0_30px_rgba(0,219,233,0.2)]">
+<span class="material-symbols-outlined text-secondary text-4xl" data-icon="memory">memory</span>
+</div>
+<span class="font-label-mono text-[10px] text-secondary">NODE_BETA</span>
+</div>
+<!-- Pod 4 -->
+<div class="flex flex-col items-center gap-3">
+<div class="w-24 h-24 rounded-full glass-panel border-tertiary flex items-center justify-center shadow-[0_0_30px_rgba(0,230,57,0.2)]">
+<span class="material-symbols-outlined text-tertiary text-4xl" data-icon="dna">genetics</span>
+</div>
+<span class="font-label-mono text-[10px] text-tertiary">SEQUENCER_A</span>
+</div>
+<!-- Pod 5 -->
+<div class="flex flex-col items-center gap-3">
+<div class="w-20 h-20 rounded-full glass-panel border-outline flex items-center justify-center opacity-50">
+<span class="material-symbols-outlined text-outline text-3xl" data-icon="cycle">cycle</span>
+</div>
+<span class="font-label-mono text-[10px] text-outline">RECYCLER</span>
+</div>
+<!-- Pod 6 -->
+<div class="flex flex-col items-center gap-3">
+<div class="w-24 h-24 rounded-full glass-panel border-tertiary flex items-center justify-center shadow-[0_0_30px_rgba(0,230,57,0.2)]">
+<span class="material-symbols-outlined text-tertiary text-4xl" data-icon="shield">shield</span>
+</div>
+<span class="font-label-mono text-[10px] text-tertiary">WALL_PRIMARY</span>
+</div>
+</div>
+</div>
+<!-- Label Overlays -->
+<div class="absolute top-6 left-6">
+<h2 class="font-h2 text-h2 uppercase text-tertiary">NEURAL TOPOLOGY</h2>
+<p class="text-on-surface-variant font-label-mono">MAPPING ACTIVE CONNECTIVITY</p>
+</div>
+</div>
+<!-- Cluster Health Widget -->
+<div class="col-span-12 xl:col-span-4 flex flex-col gap-panel-gap">
+<div class="glass-panel rounded-2xl p-8 flex flex-col items-center justify-center relative overflow-hidden h-1/2">
+<div class="relative w-48 h-48 flex items-center justify-center">
+<!-- Circular Progress Bar -->
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-surface-container-high" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-tertiary drop-shadow-[0_0_10px_rgba(0,230,57,0.5)]" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" stroke-dasharray="552.92" stroke-dashoffset="110.58" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-metric-lg text-metric-lg text-tertiary">92%</span>
+<span class="font-label-mono text-[10px] text-on-surface-variant uppercase">HEALTH SCORE</span>
+</div>
+</div>
+<div class="mt-8 grid grid-cols-2 gap-4 w-full">
+<div class="p-3 border border-white/5 bg-white/5 rounded-lg">
+<p class="text-[10px] text-on-surface-variant font-label-mono uppercase">Uptime</p>
+<p class="font-bold text-on-surface">342d 12h</p>
+</div>
+<div class="p-3 border border-white/5 bg-white/5 rounded-lg">
+<p class="text-[10px] text-on-surface-variant font-label-mono uppercase">Efficiency</p>
+<p class="font-bold text-tertiary">+4.2%</p>
+</div>
+</div>
+</div>
+<!-- Active Threats -->
+<div class="glass-panel rounded-2xl p-6 flex-grow flex flex-col">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-label-mono text-sm uppercase text-on-surface font-bold">Active Threats</h3>
+<span class="text-error font-label-mono text-[10px] animate-pulse">CRITICAL (3)</span>
+</div>
+<div class="space-y-4">
+<div class="flex items-center gap-4 p-3 border-l-2 border-error bg-error/5 rounded-r-lg">
+<div class="w-10 h-10 rounded glass-panel flex items-center justify-center text-error">
+<span class="material-symbols-outlined" data-icon="bug_report">bug_report</span>
+</div>
+<div class="flex-grow">
+<p class="text-sm font-bold">Ransom-C-4</p>
+<p class="text-[10px] text-on-surface-variant uppercase">Infiltrating Node Beta</p>
+</div>
+<button class="text-error font-label-mono text-[10px] border border-error/30 px-2 py-1 hover:bg-error/20">PURGE</button>
+</div>
+<div class="flex items-center gap-4 p-3 border-l-2 border-error bg-error/5 rounded-r-lg">
+<div class="w-10 h-10 rounded glass-panel flex items-center justify-center text-error">
+<span class="material-symbols-outlined" data-icon="security">security</span>
+</div>
+<div class="flex-grow">
+<p class="text-sm font-bold">Protocol Breach</p>
+<p class="text-[10px] text-on-surface-variant uppercase">Firewall Leak [3.4s ago]</p>
+</div>
+<button class="text-error font-label-mono text-[10px] border border-error/30 px-2 py-1 hover:bg-error/20">ISOLATE</button>
+</div>
+<div class="flex items-center gap-4 p-3 border-l-2 border-surface-variant bg-white/5 rounded-r-lg opacity-60">
+<div class="w-10 h-10 rounded glass-panel flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+</div>
+<div class="flex-grow">
+<p class="text-sm font-bold">Dormant Cyst</p>
+<p class="text-[10px] text-on-surface-variant uppercase">Latent process detected</p>
+</div>
+<span class="material-symbols-outlined text-tertiary" data-icon="check_circle">check_circle</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Row: Agent Activity & Heatmap -->
+<div class="grid grid-cols-12 gap-panel-gap mt-panel-gap">
+<!-- Immune Response Activity (Active Antibodies) -->
+<div class="col-span-12 md:col-span-4 glass-panel rounded-2xl p-6">
+<h3 class="font-label-mono text-sm uppercase text-on-surface font-bold mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary" data-icon="biotech">biotech</span>
+                        Immune Agents
+                    </h3>
+<div class="space-y-6">
+<div>
+<div class="flex justify-between text-[10px] font-label-mono uppercase mb-2">
+<span>Dendritic Cells</span>
+<span class="text-tertiary">Active [1,240]</span>
+</div>
+<div class="h-2 w-full bg-surface-container-high rounded-full overflow-hidden flex">
+<div class="h-full bg-tertiary" style="width: 75%"></div>
+<div class="h-full bg-tertiary/20" style="width: 5%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] font-label-mono uppercase mb-2">
+<span>T-Cell Response</span>
+<span class="text-secondary">Deploying [450]</span>
+</div>
+<div class="h-2 w-full bg-surface-container-high rounded-full overflow-hidden flex">
+<div class="h-full bg-secondary" style="width: 40%"></div>
+<div class="h-full bg-secondary/20" style="width: 15%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] font-label-mono uppercase mb-2">
+<span>Antibody Synthesis</span>
+<span class="text-on-surface-variant">Idle</span>
+</div>
+<div class="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-on-surface-variant/30" style="width: 12%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Danger Heatmap -->
+<div class="col-span-12 md:col-span-8 glass-panel rounded-2xl p-6 overflow-hidden relative">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-label-mono text-sm uppercase text-on-surface font-bold">Infection Vector Heatmap</h3>
+<div class="flex gap-4">
+<span class="flex items-center gap-1 font-label-mono text-[10px] uppercase text-tertiary">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span> Clean
+                            </span>
+<span class="flex items-center gap-1 font-label-mono text-[10px] uppercase text-error">
+<span class="w-2 h-2 rounded-full bg-error"></span> Critical
+                            </span>
+</div>
+</div>
+<!-- Asymmetric Map/Heatmap Grid -->
+<div class="grid grid-cols-8 gap-1 h-48 opacity-40">
+<!-- Simulated Grid Data -->
+<div class="bg-tertiary/20 rounded-sm"></div><div class="bg-tertiary/10 rounded-sm"></div><div class="bg-tertiary/30 rounded-sm"></div><div class="bg-tertiary/20 rounded-sm"></div><div class="bg-tertiary/10 rounded-sm"></div><div class="bg-error/30 rounded-sm animate-pulse"></div><div class="bg-tertiary/10 rounded-sm"></div><div class="bg-tertiary/20 rounded-sm"></div>
+<div class="bg-tertiary/10 rounded-sm"></div><div class="bg-tertiary/20 rounded-sm"></div><div class="bg-tertiary/10 rounded-sm"></div><div class="bg-error/40 rounded-sm animate-pulse"></div><div class="bg-error/60 rounded-sm animate-pulse"></div><div class="bg-error/40 rounded-sm animate-pulse"></div><div class="bg-tertiary/10 rounded-sm"></div><div class="bg-tertiary/10 rounded-sm"></div>
+<div class="bg-tertiary/20 rounded-sm"></div><div class="bg-tertiary/10 rounded-sm"></div><div class="bg-tertiary/20 rounded-sm"></div><div class="bg-tertiary/10 rounded-sm"></div><div class="bg-error/30 rounded-sm animate-pulse"></div><div class="bg-tertiary/10 rounded-sm"></div><div class="bg-tertiary/10 rounded-sm"></div><div class="bg-tertiary/10 rounded-sm"></div>
+<div class="bg-tertiary/10 rounded-sm"></div><div class="bg-tertiary/10 rounded-sm"></div><div class="bg-tertiary/20 rounded-sm"></div><div class="bg-tertiary/10 rounded-sm"></div><div class="bg-tertiary/10 rounded-sm"></div><div class="bg-tertiary/10 rounded-sm"></div><div class="bg-tertiary/20 rounded-sm"></div><div class="bg-tertiary/30 rounded-sm"></div>
+</div>
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+<div class="glass-panel px-6 py-2 rounded-full border-tertiary/50">
+<span class="text-tertiary font-label-mono text-xs uppercase tracking-widest">Scanning Network Segments...</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Horizontal Live Pod Status Feed -->
+<div class="mt-panel-gap flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+<div class="min-w-[200px] glass-panel p-4 rounded-xl flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-tertiary/20 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-sm" data-icon="terminal">terminal</span>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant font-label-mono uppercase">Pod_Alpha_1</p>
+<p class="text-xs font-bold text-on-surface">Pulsing Healthy</p>
+</div>
+</div>
+<div class="min-w-[200px] glass-panel p-4 rounded-xl flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-tertiary/20 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-sm" data-icon="terminal">terminal</span>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant font-label-mono uppercase">Pod_Alpha_2</p>
+<p class="text-xs font-bold text-on-surface">Pulsing Healthy</p>
+</div>
+</div>
+<div class="min-w-[200px] glass-panel p-4 rounded-xl flex items-center gap-3 border-error/50">
+<div class="w-8 h-8 rounded bg-error/20 flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-sm" data-icon="running_with_errors">running_with_errors</span>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant font-label-mono uppercase">Pod_Sigma_9</p>
+<p class="text-xs font-bold text-error">High Latency</p>
+</div>
+</div>
+<div class="min-w-[200px] glass-panel p-4 rounded-xl flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-tertiary/20 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-sm" data-icon="terminal">terminal</span>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant font-label-mono uppercase">Pod_Beta_1</p>
+<p class="text-xs font-bold text-on-surface">Pulsing Healthy</p>
+</div>
+</div>
+<div class="min-w-[200px] glass-panel p-4 rounded-xl flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-secondary/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-sm" data-icon="settings_backup_restore">settings_backup_restore</span>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant font-label-mono uppercase">Backup_Node</p>
+<p class="text-xs font-bold text-on-surface">Synchronizing</p>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

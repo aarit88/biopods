@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BIOPODS | Bio-Settings &amp; Policy Control</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .scan-line {
+            position: relative;
+            overflow: hidden;
+        }
+        .scan-line::after {
+            content: "";
+            position: absolute;
+            top: -100%;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent, rgba(0, 230, 57, 0.05), transparent);
+            pointer-events: none;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: #1d2026;
+            border-radius: 2px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #00e639;
+            box-shadow: 0 0 10px #00e639;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#272a30",
+                        "on-secondary-container": "#00686f",
+                        "primary-container": "#05070a",
+                        "on-background": "#e1e2ea",
+                        "on-primary-fixed-variant": "#44474b",
+                        "surface-container-lowest": "#0b0e14",
+                        "tertiary-fixed-dim": "#00e639",
+                        "tertiary-container": "#000900",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-container": "#008c1f",
+                        "surface-container": "#1d2026",
+                        "inverse-surface": "#e1e2ea",
+                        "primary": "#c5c6cb",
+                        "on-tertiary-fixed-variant": "#00530e",
+                        "surface-dim": "#101319",
+                        "surface-tint": "#c5c6cb",
+                        "on-surface-variant": "#c6c6ca",
+                        "on-surface": "#e1e2ea",
+                        "surface-variant": "#32353b",
+                        "on-tertiary": "#003907",
+                        "secondary-fixed-dim": "#00dbe9",
+                        "on-secondary-fixed": "#002022",
+                        "surface-container-highest": "#32353b",
+                        "on-error": "#690005",
+                        "primary-fixed": "#e1e2e7",
+                        "tertiary-fixed": "#72ff70",
+                        "secondary": "#d3fbff",
+                        "on-primary": "#2e3134",
+                        "tertiary": "#00e639",
+                        "on-tertiary-fixed": "#002203",
+                        "on-secondary": "#00363a",
+                        "outline-variant": "#45474a",
+                        "surface-container-low": "#191c22",
+                        "inverse-primary": "#5c5e63",
+                        "secondary-fixed": "#7df4ff",
+                        "secondary-container": "#00eefc",
+                        "inverse-on-surface": "#2d3037",
+                        "outline": "#8f9195",
+                        "background": "#101319",
+                        "surface-bright": "#363940",
+                        "on-primary-fixed": "#191c1f",
+                        "on-secondary-fixed-variant": "#004f54",
+                        "error": "#ffb4ab",
+                        "surface": "#101319",
+                        "error-container": "#93000a",
+                        "primary-fixed-dim": "#c5c6cb"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "container-padding": "32px",
+                        "panel-gap": "24px",
+                        "unit": "8px"
+                    },
+                    "fontFamily": {
+                        "h1": ["Space Grotesk"],
+                        "label-mono": ["Inter"],
+                        "h2": ["Space Grotesk"],
+                        "body-m": ["Inter"],
+                        "metric-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h1": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-mono": ["12px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                        "h2": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-m": ["16px", {"lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400"}],
+                        "metric-lg": ["40px", {"lineHeight": "1", "letterSpacing": "-0.04em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-m min-h-screen selection:bg-tertiary/30">
+<!-- TOP NAV BAR (Shared Component) -->
+<header class="bg-surface-container-low/60 backdrop-blur-xl border-b border-white/5 bg-gradient-to-r from-surface-container-low via-surface-container to-surface-container-low shadow-[0_4px_30px_rgba(0,0,0,0.1)] flex justify-between items-center w-full px-container-padding py-4 z-50 docked full-width top-0 sticky">
+<div class="flex items-center gap-6">
+<img alt="BIOPODS Brand Mark" class="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(0,230,57,0.5)]" data-alt="A futuristic, cinematic logo for 'BIOPODS'. The icon is a stylized biological cell or pod with glowing neural pathways and cybernetic circuits integrated into its membrane. Use electric cyan and bio-green neon colors against a deep space black background. High-tech, minimal, high-end AI brand identity. flat vector style with subtle glows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCz6Yz1m9lI8-Tt27siGPr3rYkRUij3T-JpCHbUkT4mkLN0jS6-xTxUzE1H7KfVELwV9UUhCZoJ0z-iDflTZacsC4GTtSOJ-L1DHVWM1nBX0YTA6ZFH12ynaYQ3IWIanScviR5fXFmlCYAg4111vCGxlenpY1ZWg9--7sD0mBmyOO2ZWt7gogOGJdi-s-2feiDnwL7wmH5L6n_8R_rvE_5SAZZs0W5zGzXqyf5HkoWqFIH-ZYX8mgqbcw1Bm8CfvClWhJoeqmvx7sY"/>
+<span class="font-h2 text-h2 uppercase tracking-tight font-bold text-tertiary drop-shadow-[0_0_8px_rgba(0,230,57,0.5)]">BIOPODS</span>
+</div>
+<nav class="hidden md:flex gap-8 items-center">
+<a class="text-on-surface-variant font-body-m hover:text-tertiary hover:drop-shadow-[0_0_5px_rgba(0,230,57,0.8)] transition-all duration-300" href="#">Cluster Status</a>
+<a class="text-on-surface-variant font-body-m hover:text-tertiary hover:drop-shadow-[0_0_5px_rgba(0,230,57,0.8)] transition-all duration-300" href="#">Neural Map</a>
+<a class="text-on-surface-variant font-body-m hover:text-tertiary hover:drop-shadow-[0_0_5px_rgba(0,230,57,0.8)] transition-all duration-300" href="#">Immune Logs</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="bg-tertiary text-on-tertiary px-6 py-2 rounded-lg font-label-mono uppercase tracking-widest text-sm hover:brightness-110 active:scale-95 transition-all">Deploy Antibody</button>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-tertiary transition-colors">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-tertiary transition-colors">settings</span>
+</div>
+</header>
+<div class="flex">
+<!-- SIDE NAV BAR (Shared Component) -->
+<aside class="bg-surface-container-lowest/80 backdrop-blur-2xl border-r border-white/10 bg-surface-container-lowest shadow-2xl flex flex-col h-full py-gutter z-40 docked left-0 h-screen w-64 fixed">
+<div class="px-6 mb-10">
+<h3 class="font-h2 text-h2 text-tertiary leading-none">Immune System</h3>
+<p class="font-label-mono text-xs text-on-surface-variant mt-1">Vitals: Optimal</p>
+</div>
+<nav class="flex-1">
+<a class="text-on-surface-variant hover:text-on-surface flex items-center gap-4 px-6 py-4 hover:bg-surface-container-highest/20 transition-colors hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">hub</span>
+<span class="font-label-mono text-label-mono uppercase">Neural Spine</span>
+</a>
+<a class="text-on-surface-variant hover:text-on-surface flex items-center gap-4 px-6 py-4 hover:bg-surface-container-highest/20 transition-colors hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">healing</span>
+<span class="font-label-mono text-label-mono uppercase">Antibodies</span>
+</a>
+<a class="text-on-surface-variant hover:text-on-surface flex items-center gap-4 px-6 py-4 hover:bg-surface-container-highest/20 transition-colors hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">biotech</span>
+<span class="font-label-mono text-label-mono uppercase">T-Cell HUD</span>
+</a>
+<a class="text-on-surface-variant hover:text-on-surface flex items-center gap-4 px-6 py-4 hover:bg-surface-container-highest/20 transition-colors hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-label-mono text-label-mono uppercase">Mutation Log</span>
+</a>
+<a class="bg-tertiary-container/30 text-tertiary border-r-4 border-tertiary flex items-center gap-4 px-6 py-4 transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">schema</span>
+<span class="font-label-mono text-label-mono uppercase">Bio-Settings</span>
+</a>
+</nav>
+<div class="px-6 mt-auto border-t border-white/5 pt-6">
+<a class="flex items-center gap-4 py-2 text-on-surface-variant hover:text-tertiary transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-label-mono text-xs uppercase">Help</span>
+</a>
+<a class="flex items-center gap-4 py-2 text-on-surface-variant hover:text-tertiary transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-label-mono text-xs uppercase">Docs</span>
+</a>
+<button class="w-full mt-6 py-3 border border-error/50 text-error font-label-mono uppercase tracking-widest text-xs hover:bg-error/10 transition-all rounded">Purge Threats</button>
+</div>
+</aside>
+<!-- MAIN CONTENT -->
+<main class="ml-64 flex-1 p-container-padding bg-background relative">
+<!-- Background Decorative Elements -->
+<div class="absolute inset-0 overflow-hidden pointer-events-none">
+<div class="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-tertiary/5 blur-[120px]"></div>
+<div class="absolute bottom-[10%] right-[-5%] w-[400px] h-[400px] rounded-full bg-secondary-container/5 blur-[100px]"></div>
+</div>
+<!-- Header Section -->
+<header class="mb-12 relative z-10">
+<div class="flex items-center gap-2 text-tertiary mb-2">
+<span class="material-symbols-outlined text-sm">shield_locked</span>
+<span class="font-label-mono text-xs uppercase tracking-[0.2em]">Security Protocol v4.2.0</span>
+</div>
+<h1 class="font-h1 text-h1 text-on-surface leading-tight">Bio-Response Policies</h1>
+<p class="text-on-surface-variant max-w-2xl mt-4 font-body-m">Configure the autonomous defense mechanisms of the BIOPOD network. Adjust sensitivity thresholds and define operational boundaries for neural antibody deployment.</p>
+</header>
+<!-- Settings Grid -->
+<div class="grid grid-cols-12 gap-panel-gap relative z-10">
+<!-- Danger Thresholds (Slider Control) -->
+<section class="col-span-12 lg:col-span-8 glass-panel bg-surface-container-low/40 rounded-xl p-8 scan-line">
+<div class="flex justify-between items-start mb-10">
+<div>
+<h3 class="font-h2 text-2xl text-on-surface mb-2">Danger Thresholds</h3>
+<p class="text-on-surface-variant text-sm">Define the activation sensitivity for automated counter-measures.</p>
+</div>
+<span class="material-symbols-outlined text-tertiary text-3xl">warning</span>
+</div>
+<div class="space-y-12">
+<!-- Threshold Item 1 -->
+<div>
+<div class="flex justify-between items-center mb-4">
+<label class="font-label-mono text-sm uppercase text-on-surface">Neural Toxicity Level</label>
+<span class="font-metric-lg text-2xl text-tertiary">42%</span>
+</div>
+<input class="w-full h-1" max="100" min="0" type="range" value="42"/>
+<div class="flex justify-between mt-2 font-label-mono text-[10px] text-on-surface-variant uppercase">
+<span>Dormant</span>
+<span>Reactive</span>
+<span class="text-error">Lethal</span>
+</div>
+</div>
+<!-- Threshold Item 2 -->
+<div>
+<div class="flex justify-between items-center mb-4">
+<label class="font-label-mono text-sm uppercase text-on-surface">Synaptic Delay Limit</label>
+<span class="font-metric-lg text-2xl text-secondary-fixed-dim">12ms</span>
+</div>
+<input class="w-full h-1 accent-secondary-fixed-dim" max="50" min="0" type="range" value="12"/>
+<div class="flex justify-between mt-2 font-label-mono text-[10px] text-on-surface-variant uppercase">
+<span>Instant</span>
+<span>Buffered</span>
+<span class="text-error">Critical</span>
+</div>
+</div>
+<!-- Threshold Item 3 -->
+<div>
+<div class="flex justify-between items-center mb-4">
+<label class="font-label-mono text-sm uppercase text-on-surface">Membrane Integrity</label>
+<span class="font-metric-lg text-2xl text-tertiary">88%</span>
+</div>
+<input class="w-full h-1" max="100" min="0" type="range" value="88"/>
+<div class="flex justify-between mt-2 font-label-mono text-[10px] text-on-surface-variant uppercase">
+<span class="text-error">Failure</span>
+<span>Degraded</span>
+<span>Optimal</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Learning Modes (Toggle Control) -->
+<section class="col-span-12 lg:col-span-4 space-y-panel-gap">
+<div class="glass-panel bg-surface-container-high/60 rounded-xl p-6 border-l-4 border-tertiary">
+<h4 class="font-label-mono text-xs uppercase text-tertiary mb-4">Current Operating Mode</h4>
+<div class="space-y-3">
+<!-- Mode: Manual -->
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest/50 rounded-lg cursor-pointer hover:bg-surface-container-lowest transition-colors border border-transparent hover:border-white/5 group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">touch_app</span>
+<div>
+<div class="font-label-mono text-sm text-on-surface">Manual</div>
+<div class="text-[10px] text-on-surface-variant uppercase">Direct Operator Control</div>
+</div>
+</div>
+<div class="w-4 h-4 rounded-full border-2 border-on-surface-variant"></div>
+</div>
+<!-- Mode: Assisted -->
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest/50 rounded-lg cursor-pointer hover:bg-surface-container-lowest transition-colors border border-tertiary/20 group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary">psychology</span>
+<div>
+<div class="font-label-mono text-sm text-on-surface">Assisted</div>
+<div class="text-[10px] text-on-surface-variant uppercase">AI Suggestions + Confirm</div>
+</div>
+</div>
+<div class="w-4 h-4 rounded-full border-4 border-tertiary"></div>
+</div>
+<!-- Mode: Fully Autonomous -->
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest/50 rounded-lg cursor-pointer hover:bg-surface-container-lowest transition-colors border border-transparent hover:border-white/5 group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-secondary-fixed-dim transition-colors">auto_mode</span>
+<div>
+<div class="font-label-mono text-sm text-on-surface">Autonomous</div>
+<div class="text-[10px] text-on-surface-variant uppercase">Full System Agency</div>
+</div>
+</div>
+<div class="w-4 h-4 rounded-full border-2 border-on-surface-variant"></div>
+</div>
+</div>
+</div>
+<div class="glass-panel bg-tertiary-container/10 rounded-xl p-6 relative overflow-hidden">
+<div class="relative z-10">
+<h4 class="font-label-mono text-xs uppercase text-on-surface mb-2">Learning Pulse</h4>
+<div class="flex items-end gap-1 h-12 mb-4">
+<div class="w-1 bg-tertiary h-4 rounded-full"></div>
+<div class="w-1 bg-tertiary h-8 rounded-full"></div>
+<div class="w-1 bg-tertiary h-12 rounded-full"></div>
+<div class="w-1 bg-tertiary h-6 rounded-full"></div>
+<div class="w-1 bg-tertiary h-10 rounded-full"></div>
+<div class="w-1 bg-tertiary h-7 rounded-full"></div>
+<div class="w-1 bg-tertiary h-9 rounded-full"></div>
+<div class="w-1 bg-tertiary h-5 rounded-full"></div>
+</div>
+<p class="text-[10px] text-on-surface-variant">The core is currently optimizing response vectors based on last 24h neural traffic.</p>
+</div>
+<!-- Decorative ring -->
+<div class="absolute -right-4 -bottom-4 w-24 h-24 border border-tertiary/20 rounded-full"></div>
+</div>
+</section>
+<!-- Action Permissions (Advanced Control UI) -->
+<section class="col-span-12 glass-panel bg-surface-container-lowest/60 rounded-xl p-8 border border-white/5">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+<div>
+<h3 class="font-h2 text-2xl text-on-surface mb-1">Action Permissions</h3>
+<p class="text-on-surface-variant text-sm">Fine-tune specific capabilities for autonomous agents.</p>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-2 bg-surface-container-highest rounded-lg text-xs font-label-mono uppercase hover:bg-surface-variant transition-all">Export Policy</button>
+<button class="px-4 py-2 bg-tertiary text-on-tertiary rounded-lg text-xs font-label-mono uppercase hover:brightness-110 transition-all">Save Changes</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Toggle Card 1 -->
+<div class="p-4 rounded-lg bg-surface-container-high/40 border border-white/5 flex items-center justify-between">
+<div class="flex gap-3 items-center">
+<div class="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary">content_cut</span>
+</div>
+<div>
+<div class="font-label-mono text-xs text-on-surface">Auto-Pruning</div>
+<div class="text-[10px] text-on-surface-variant">Discard dead nodes</div>
+</div>
+</div>
+<div class="w-12 h-6 bg-tertiary rounded-full relative flex items-center px-1">
+<div class="w-4 h-4 bg-on-tertiary rounded-full ml-auto"></div>
+</div>
+</div>
+<!-- Toggle Card 2 -->
+<div class="p-4 rounded-lg bg-surface-container-high/40 border border-white/5 flex items-center justify-between">
+<div class="flex gap-3 items-center">
+<div class="w-10 h-10 rounded-full bg-secondary-container/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary-fixed-dim">sync_alt</span>
+</div>
+<div>
+<div class="font-label-mono text-xs text-on-surface">Path Rerouting</div>
+<div class="text-[10px] text-on-surface-variant">Self-healing traffic</div>
+</div>
+</div>
+<div class="w-12 h-6 bg-tertiary rounded-full relative flex items-center px-1">
+<div class="w-4 h-4 bg-on-tertiary rounded-full ml-auto"></div>
+</div>
+</div>
+<!-- Toggle Card 3 -->
+<div class="p-4 rounded-lg bg-surface-container-high/40 border border-white/5 flex items-center justify-between">
+<div class="flex gap-3 items-center">
+<div class="w-10 h-10 rounded-full bg-error/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-error">lock_open</span>
+</div>
+<div>
+<div class="font-label-mono text-xs text-on-surface">Override Auth</div>
+<div class="text-[10px] text-on-surface-variant">Emergency bypass</div>
+</div>
+</div>
+<div class="w-12 h-6 bg-surface-container-highest rounded-full relative flex items-center px-1">
+<div class="w-4 h-4 bg-on-surface-variant rounded-full"></div>
+</div>
+</div>
+<!-- Toggle Card 4 -->
+<div class="p-4 rounded-lg bg-surface-container-high/40 border border-white/5 flex items-center justify-between">
+<div class="flex gap-3 items-center">
+<div class="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary">memory</span>
+</div>
+<div>
+<div class="font-label-mono text-xs text-on-surface">Memory Purge</div>
+<div class="text-[10px] text-on-surface-variant">Auto-clear buffer</div>
+</div>
+</div>
+<div class="w-12 h-6 bg-tertiary rounded-full relative flex items-center px-1">
+<div class="w-4 h-4 bg-on-tertiary rounded-full ml-auto"></div>
+</div>
+</div>
+<!-- Toggle Card 5 -->
+<div class="p-4 rounded-lg bg-surface-container-high/40 border border-white/5 flex items-center justify-between">
+<div class="flex gap-3 items-center">
+<div class="w-10 h-10 rounded-full bg-secondary-container/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary-fixed-dim">terminal</span>
+</div>
+<div>
+<div class="font-label-mono text-xs text-on-surface">Shadow Execution</div>
+<div class="text-[10px] text-on-surface-variant">Run in background</div>
+</div>
+</div>
+<div class="w-12 h-6 bg-tertiary rounded-full relative flex items-center px-1">
+<div class="w-4 h-4 bg-on-tertiary rounded-full ml-auto"></div>
+</div>
+</div>
+<!-- Toggle Card 6 -->
+<div class="p-4 rounded-lg bg-surface-container-high/40 border border-white/5 flex items-center justify-between">
+<div class="flex gap-3 items-center">
+<div class="w-10 h-10 rounded-full bg-error/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">security</span>
+</div>
+<div>
+<div class="font-label-mono text-xs text-on-surface">Kernel Isolation</div>
+<div class="text-[10px] text-on-surface-variant">Lock sub-system</div>
+</div>
+</div>
+<div class="w-12 h-6 bg-surface-container-highest rounded-full relative flex items-center px-1">
+<div class="w-4 h-4 bg-on-surface-variant rounded-full"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Safety Overrides & Terminal -->
+<section class="col-span-12 glass-panel bg-primary-container rounded-xl overflow-hidden flex flex-col md:flex-row min-h-[300px]">
+<div class="p-8 flex-1">
+<div class="flex items-center gap-3 mb-6">
+<span class="w-3 h-3 rounded-full bg-error pulse-glow"></span>
+<h3 class="font-label-mono text-sm uppercase text-error tracking-widest">Global Safety Override</h3>
+</div>
+<p class="text-on-primary-container text-sm mb-8 leading-relaxed max-w-lg">In case of neural cascade failure or system-wide hallucination, the Global Safety Override will terminate all autonomous agents and revert the core to cold-storage mode. Use only as a final measure.</p>
+<button class="bg-error-container text-error px-10 py-4 rounded font-h2 text-sm uppercase font-bold hover:brightness-125 transition-all border border-error/30 shadow-[0_0_20px_rgba(147,0,10,0.3)]">Inhibit All Bio-Processes</button>
+</div>
+<div class="bg-surface-container-lowest p-6 w-full md:w-96 border-l border-white/5 flex flex-col">
+<div class="flex justify-between items-center mb-4">
+<span class="font-label-mono text-[10px] text-on-surface-variant">POLICY_LOGS.EXE</span>
+<span class="material-symbols-outlined text-on-surface-variant text-xs">close</span>
+</div>
+<div class="font-mono text-[11px] text-tertiary/60 space-y-1 overflow-y-auto flex-1">
+<div>[14:22:01] Policy "Neural_Shield" updated by Officer.</div>
+<div>[14:22:05] Re-calibrating antibody deployment vectors...</div>
+<div class="text-secondary-fixed-dim">[14:23:44] Learning mode set to ASSISTED.</div>
+<div>[14:25:01] Checksum verify: 0xA4F29... OK.</div>
+<div class="text-error">[14:26:12] Warning: Danger threshold near lethal limit.</div>
+<div class="animate-pulse">_</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Footer Details -->
+<footer class="mt-16 flex justify-between items-center text-on-surface-variant font-label-mono text-[10px] uppercase">
+<div class="flex gap-6">
+<span>© 2124 BIOPODS INC.</span>
+<a class="hover:text-tertiary transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-tertiary transition-colors" href="#">Neural Ethics Agreement</a>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span>System Status: Optimal</span>
+</div>
+</footer>
+</main>
+</div>
+<!-- Floating Action Button (FAB) - Only for Home/Dashboard as per mandate, hidden here -->
+</body></html>

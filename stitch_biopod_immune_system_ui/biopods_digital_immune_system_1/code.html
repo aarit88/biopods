@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-high": "#272a30",
+                    "on-secondary-container": "#00686f",
+                    "primary-container": "#05070a",
+                    "on-background": "#e1e2ea",
+                    "on-primary-fixed-variant": "#44474b",
+                    "surface-container-lowest": "#0b0e14",
+                    "tertiary-fixed-dim": "#00e639",
+                    "tertiary-container": "#000900",
+                    "on-error-container": "#ffdad6",
+                    "on-primary-container": "#76787d",
+                    "on-tertiary-container": "#008c1f",
+                    "surface-container": "#1d2026",
+                    "inverse-surface": "#e1e2ea",
+                    "primary": "#c5c6cb",
+                    "on-tertiary-fixed-variant": "#00530e",
+                    "surface-dim": "#101319",
+                    "surface-tint": "#c5c6cb",
+                    "on-surface-variant": "#c6c6ca",
+                    "on-surface": "#e1e2ea",
+                    "surface-variant": "#32353b",
+                    "on-tertiary": "#003907",
+                    "secondary-fixed-dim": "#00dbe9",
+                    "on-secondary-fixed": "#002022",
+                    "surface-container-highest": "#32353b",
+                    "on-error": "#690005",
+                    "primary-fixed": "#e1e2e7",
+                    "tertiary-fixed": "#72ff70",
+                    "secondary": "#d3fbff",
+                    "on-primary": "#2e3134",
+                    "tertiary": "#00e639",
+                    "on-tertiary-fixed": "#002203",
+                    "on-secondary": "#00363a",
+                    "outline-variant": "#45474a",
+                    "surface-container-low": "#191c22",
+                    "inverse-primary": "#5c5e63",
+                    "secondary-fixed": "#7df4ff",
+                    "secondary-container": "#00eefc",
+                    "inverse-on-surface": "#2d3037",
+                    "outline": "#8f9195",
+                    "background": "#101319",
+                    "surface-bright": "#363940",
+                    "on-primary-fixed": "#191c1f",
+                    "on-secondary-fixed-variant": "#004f54",
+                    "error": "#ffb4ab",
+                    "surface": "#101319",
+                    "error-container": "#93000a",
+                    "primary-fixed-dim": "#c5c6cb"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "container-padding": "32px",
+                    "panel-gap": "24px",
+                    "unit": "8px"
+            },
+            "fontFamily": {
+                    "h1": ["Space Grotesk"],
+                    "label-mono": ["Inter"],
+                    "h2": ["Space Grotesk"],
+                    "body-m": ["Inter"],
+                    "metric-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "h1": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-mono": ["12px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                    "h2": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-m": ["16px", {"lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400"}],
+                    "metric-lg": ["40px", {"lineHeight": "1", "letterSpacing": "-0.04em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-panel {
+            backdrop-filter: blur(20px);
+            background: rgba(29, 32, 38, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: inset 0 0 20px rgba(0, 230, 57, 0.05);
+        }
+        .neural-glow {
+            box-shadow: 0 0 30px rgba(0, 230, 57, 0.15);
+        }
+        .scanline {
+            background: linear-gradient(to bottom, transparent 50%, rgba(0, 230, 57, 0.03) 50%);
+            background-size: 100% 4px;
+        }
+        .mesh-gradient {
+            background-image: radial-gradient(at 0% 0%, rgba(0, 230, 57, 0.1) 0px, transparent 50%),
+                              radial-gradient(at 100% 100%, rgba(0, 222, 233, 0.1) 0px, transparent 50%);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-m selection:bg-tertiary selection:text-on-tertiary overflow-x-hidden">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 z-50 w-full flex justify-between items-center px-container-padding py-4 bg-surface-container-low/60 backdrop-blur-xl border-b border-white/5 bg-gradient-to-r from-surface-container-low via-surface-container to-surface-container-low shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
+<div class="flex items-center gap-4">
+<img alt="BIOPODS Brand Mark" class="w-10 h-10 drop-shadow-[0_0_8px_rgba(0,230,57,0.5)]" data-alt="A professional, minimalist brand logo for BIOPODS featuring a glowing cybernetic cell structure. The design uses high-contrast bio-green and deep obsidian black, with intricate neural pathway lines wrapping around a central core. The lighting is cinematic, highlighting the futuristic tech-biological fusion aesthetic of the platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCz6Yz1m9lI8-Tt27siGPr3rYkRUij3T-JpCHbUkT4mkLN0jS6-xTxUzE1H7KfVELwV9UUhCZoJ0z-iDflTZacsC4GTtSOJ-L1DHVWM1nBX0YTA6ZFH12ynaYQ3IWIanScviR5fXFmlCYAg4111vCGxlenpY1ZWg9--7sD0mBmyOO2ZWt7gogOGJdi-s-2feiDnwL7wmH5L6n_8R_rvE_5SAZZs0W5zGzXqyf5HkoWqFIH-ZYX8mgqbcw1Bm8CfvClWhJoeqmvx7sY"/>
+<span class="font-h2 text-h2 uppercase tracking-tight font-bold text-tertiary drop-shadow-[0_0_8px_rgba(0,230,57,0.5)]">BIOPODS</span>
+</div>
+<nav class="hidden md:flex gap-8">
+<a class="text-tertiary border-b-2 border-tertiary pb-1 font-body-m hover:text-tertiary hover:drop-shadow-[0_0_5px_rgba(0,230,57,0.8)] transition-all duration-300" href="#">Cluster Status</a>
+<a class="text-on-surface-variant font-body-m hover:text-tertiary hover:drop-shadow-[0_0_5px_rgba(0,230,57,0.8)] transition-all duration-300" href="#">Neural Map</a>
+<a class="text-on-surface-variant font-body-m hover:text-tertiary hover:drop-shadow-[0_0_5px_rgba(0,230,57,0.8)] transition-all duration-300" href="#">Immune Logs</a>
+</nav>
+<div class="flex items-center gap-6">
+<div class="flex gap-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-tertiary transition-colors">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-tertiary transition-colors">settings</span>
+</div>
+<button class="bg-tertiary text-on-tertiary font-label-mono px-6 py-2 rounded-lg hover:brightness-110 active:scale-95 transition-all">
+                Deploy Antibody
+            </button>
+</div>
+</header>
+<main class="relative pt-24">
+<!-- Hero Section -->
+<section class="relative min-h-[90vh] flex items-center px-container-padding overflow-hidden">
+<!-- Background Elements -->
+<div class="absolute inset-0 -z-10 mesh-gradient opacity-40"></div>
+<div class="absolute inset-0 -z-10 scanline opacity-20"></div>
+<div class="container mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+<div class="lg:col-span-7 space-y-8">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-tertiary/30 bg-tertiary/5 text-tertiary font-label-mono text-label-mono">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-tertiary"></span>
+</span>
+                        SYSTEM STATUS: ACTIVE MONITORING
+                    </div>
+<h1 class="font-h1 text-h1 text-on-background leading-tight">
+                        Your cluster doesn't need a manager. <br/>
+<span class="text-tertiary drop-shadow-[0_0_15px_rgba(0,230,57,0.3)]">It needs an immune system.</span>
+</h1>
+<p class="text-body-m text-on-surface-variant max-w-xl leading-relaxed">
+                        Transition from reactive logging to autonomous biological healing. BIOPODS integrates directly into your neural compute layer, identifying threats and deploying antibodies before latency peaks.
+                    </p>
+<div class="flex flex-wrap gap-4">
+<button class="px-8 py-4 bg-tertiary text-on-tertiary font-h2 text-body-m rounded-lg shadow-[0_0_20px_rgba(0,230,57,0.4)] hover:shadow-[0_0_40px_rgba(0,230,57,0.6)] transition-all">
+                            Deploy Immune System
+                        </button>
+<button class="px-8 py-4 border border-outline text-on-surface font-h2 text-body-m rounded-lg hover:bg-surface-variant/30 transition-all">
+                            View Neural Map
+                        </button>
+</div>
+</div>
+<!-- Floating Metrics Overlay -->
+<div class="lg:col-span-5 relative">
+<div class="glass-panel p-8 rounded-2xl relative z-10 space-y-6 neural-glow">
+<div class="flex justify-between items-center border-b border-white/10 pb-4">
+<span class="font-label-mono text-on-surface-variant">BIOMETRIC FEED</span>
+<span class="text-tertiary font-label-mono">0.02ms LATENCY</span>
+</div>
+<div class="space-y-6">
+<div class="flex items-center justify-between">
+<div>
+<p class="text-on-surface-variant text-label-mono mb-1">SYSTEM VITALS</p>
+<h3 class="font-metric-lg text-metric-lg text-secondary">98.4%</h3>
+</div>
+<div class="w-16 h-16 rounded-full border-4 border-secondary/20 border-t-secondary animate-spin"></div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-label-mono">
+<span>ACTIVE ANTIBODIES</span>
+<span>1,242 UNITS</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-tertiary h-full w-[75%] rounded-full shadow-[0_0_10px_rgba(0,230,57,0.5)]"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 pt-4">
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-white/5">
+<p class="text-label-mono text-on-surface-variant">THREATS PURGED</p>
+<p class="font-h2 text-h2 text-on-surface">14.2k</p>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-white/5">
+<p class="text-label-mono text-on-surface-variant">T-CELL RADIUS</p>
+<p class="font-h2 text-h2 text-on-surface">GLOBAL</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Decorative background graphic -->
+<div class="absolute -top-12 -right-12 w-64 h-64 bg-tertiary/10 rounded-full blur-[80px]"></div>
+<div class="absolute -bottom-8 -left-8 w-48 h-48 bg-secondary/10 rounded-full blur-[60px]"></div>
+</div>
+</div>
+</section>
+<!-- Problem/Solution Bento Grid -->
+<section class="py-24 px-container-padding bg-surface-container-lowest/50">
+<div class="container mx-auto">
+<div class="mb-16 text-center max-w-2xl mx-auto">
+<h2 class="font-h2 text-h2 mb-4">The Biological Imperative</h2>
+<p class="text-on-surface-variant">Modern infrastructure is too complex for human management. We've evolved beyond dashboards into the era of the self-healing organism.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-panel-gap">
+<!-- Card 1 -->
+<div class="md:col-span-2 glass-panel p-10 rounded-3xl group hover:border-tertiary/50 transition-colors">
+<div class="flex flex-col md:flex-row gap-8">
+<div class="flex-1 space-y-6">
+<div class="w-12 h-12 rounded-lg bg-tertiary/20 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined">healing</span>
+</div>
+<h3 class="font-h2 text-h2">Auto-Immune Response</h3>
+<p class="text-on-surface-variant leading-relaxed">Traditional SREs react to alerts. BIOPODS acts like a T-cell, identifying mutated code pathways and isolating them within milliseconds, preventing the infection from spreading across the cluster spine.</p>
+<ul class="space-y-3 font-label-mono text-on-surface-variant">
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-tertiary text-sm">check_circle</span> REAL-TIME MUTATION LOGGING</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-tertiary text-sm">check_circle</span> AUTONOMOUS POD RESCHEDULING</li>
+</ul>
+</div>
+<div class="flex-1 bg-surface-container-high rounded-2xl overflow-hidden min-h-[240px]">
+<img alt="Microscopic visualization of neural network" class="w-full h-full object-cover opacity-60 grayscale hover:grayscale-0 transition-all duration-700" data-alt="A cinematic, microscopic view of a glowing digital neural network resembling biological synapses. Bright green and cyan data pulses flow through intricate pathways against a deep, dark background. The scene is filled with floating crystalline particles and soft light flares, evoking a sense of high-tech biological intelligence." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqlWW19gI8NHXVKt7-TT3W_k7zzHrUMV5Dqxeurwc76-mNZDHwIVWadGQ277nuV5B5vz1F6ossLN4Hi_WmJbkC5UmKHfxzs_fy35oeN2NKgU_HPtpqJk0vP5gYQuj_buCZPbHpeq-OOm-ibXDnRsPm_BY9oRyHtlXuTS2miKBzbYmbhuuvTUGASb5k-PDloW7E7xrbnCjjpxrFcPFAbsLjp_zKYk0yqnQJC5R-acJ2UE4bvmuaQT9f3SG_6t7FMPzYFBHwxYyj0uo"/>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="glass-panel p-10 rounded-3xl flex flex-col justify-between hover:border-secondary/50 transition-colors">
+<div class="space-y-6">
+<div class="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">hub</span>
+</div>
+<h3 class="font-h2 text-h2">Neural Spine</h3>
+<p class="text-on-surface-variant leading-relaxed">Centralized intelligence that maps every dependency as a synaptic connection. Visualize your entire stack as a living, breathing entity.</p>
+</div>
+<div class="mt-8 pt-8 border-t border-white/5 flex items-center justify-between">
+<span class="font-label-mono text-secondary">VIEW SYNERGY</span>
+<span class="material-symbols-outlined text-secondary">arrow_forward</span>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="glass-panel p-10 rounded-3xl hover:border-tertiary/50 transition-colors">
+<div class="space-y-6">
+<div class="w-12 h-12 rounded-lg bg-tertiary/20 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined">biotech</span>
+</div>
+<h3 class="font-h2 text-h2">Genetic Drift</h3>
+<p class="text-on-surface-variant leading-relaxed">Monitor how your applications evolve over time. BIOPODS detects subtle logic mutations that lead to catastrophic failures long before they occur.</p>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="md:col-span-2 glass-panel p-10 rounded-3xl bg-gradient-to-br from-surface-container to-surface-container-high hover:border-tertiary/30 transition-colors overflow-hidden relative">
+<div class="relative z-10 flex flex-col md:flex-row gap-8 items-center">
+<div class="flex-1">
+<h3 class="font-h2 text-h2 mb-4">Holographic Architecture</h3>
+<p class="text-on-surface-variant mb-6">Explore the architecture overview. Our 4D engine renders your Kubernetes clusters as an interactive neural map, where every node is a living cell.</p>
+<button class="bg-white/10 backdrop-blur-md border border-white/20 px-6 py-3 rounded-lg font-label-mono hover:bg-white/20 transition-all">
+                                    LAUNCH HUD
+                                </button>
+</div>
+<div class="flex-1 w-full h-48 bg-black/40 rounded-xl border border-tertiary/20 flex items-center justify-center">
+<!-- Mock holographic diagram -->
+<div class="relative w-32 h-32">
+<div class="absolute inset-0 border-2 border-tertiary/40 rounded-full animate-pulse"></div>
+<div class="absolute inset-4 border border-secondary/40 rounded-full rotate-45"></div>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-4xl text-tertiary">schema</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Ambient glow -->
+<div class="absolute -bottom-20 -right-20 w-80 h-80 bg-tertiary/5 rounded-full blur-[100px]"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA Section -->
+<section class="py-32 px-container-padding relative overflow-hidden">
+<div class="absolute inset-0 -z-10 bg-gradient-to-b from-background via-surface-container-lowest to-background"></div>
+<div class="container mx-auto text-center space-y-12">
+<div class="max-w-3xl mx-auto space-y-6">
+<h2 class="font-h1 text-h1">Ready to activate your <span class="text-tertiary">Immune Core</span>?</h2>
+<p class="text-body-m text-on-surface-variant">Join the elite engineering teams treating their infrastructure as a living organism. Deploy BIOPODS today and watch your system evolve.</p>
+</div>
+<div class="flex flex-col sm:flex-row items-center justify-center gap-6">
+<button class="w-full sm:w-auto px-10 py-5 bg-tertiary text-on-tertiary font-h2 text-h2 rounded-lg hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(0,230,57,0.3)]">
+                        Purge Threats Now
+                    </button>
+<a class="font-label-mono text-secondary hover:text-secondary-fixed transition-colors flex items-center gap-2 group" href="#">
+                        READ THE DOCUMENTATION
+                        <span class="material-symbols-outlined group-hover:translate-x-2 transition-transform">arrow_forward</span>
+</a>
+</div>
+<div class="pt-24 opacity-50 flex flex-wrap justify-center gap-12 grayscale">
+<div class="font-h2 text-h2 opacity-20">CYBERCORE</div>
+<div class="font-h2 text-h2 opacity-20">NEURALINK</div>
+<div class="font-h2 text-h2 opacity-20">BIOTECH.AI</div>
+<div class="font-h2 text-h2 opacity-20">PODSTRAT</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest border-t border-white/5 py-12 px-container-padding">
+<div class="container mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+<div class="space-y-4">
+<div class="flex items-center gap-2">
+<img alt="BIOPODS Brand Mark" class="w-6 h-6 grayscale opacity-70" data-alt="A futuristic, cinematic logo for BIOPODS showing stylized biological cell with glowing neural pathways in a minimal vector style. Deep blacks and bio-green accents dominate the palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCz6Yz1m9lI8-Tt27siGPr3rYkRUij3T-JpCHbUkT4mkLN0jS6-xTxUzE1H7KfVELwV9UUhCZoJ0z-iDflTZacsC4GTtSOJ-L1DHVWM1nBX0YTA6ZFH12ynaYQ3IWIanScviR5fXFmlCYAg4111vCGxlenpY1ZWg9--7sD0mBmyOO2ZWt7gogOGJdi-s-2feiDnwL7wmH5L6n_8R_rvE_5SAZZs0W5zGzXqyf5HkoWqFIH-ZYX8mgqbcw1Bm8CfvClWhJoeqmvx7sY"/>
+<span class="font-h2 text-body-m font-bold text-on-surface">BIOPODS</span>
+</div>
+<p class="text-label-mono text-on-surface-variant leading-relaxed">
+                    ADVANCED CLUSTER IMMUNOLOGY <br/>
+                    EST. 2024 / NEURAL GENESIS
+                </p>
+</div>
+<div class="space-y-4">
+<h4 class="font-label-mono text-tertiary">ORGANISM</h4>
+<nav class="flex flex-col gap-2 text-on-surface-variant text-body-m">
+<a class="hover:text-on-surface transition-colors" href="#">Neural Spine</a>
+<a class="hover:text-on-surface transition-colors" href="#">Antibodies</a>
+<a class="hover:text-on-surface transition-colors" href="#">T-Cell HUD</a>
+</nav>
+</div>
+<div class="space-y-4">
+<h4 class="font-label-mono text-tertiary">RESOURCES</h4>
+<nav class="flex flex-col gap-2 text-on-surface-variant text-body-m">
+<a class="hover:text-on-surface transition-colors" href="#">Documentation</a>
+<a class="hover:text-on-surface transition-colors" href="#">Mutation Log</a>
+<a class="hover:text-on-surface transition-colors" href="#">System Settings</a>
+</nav>
+</div>
+<div class="space-y-4">
+<h4 class="font-label-mono text-tertiary">STAY VITAL</h4>
+<div class="flex gap-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-tertiary transition-colors">hub</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-tertiary transition-colors">schema</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-tertiary transition-colors">history</span>
+</div>
+</div>
+</div>
+<div class="container mx-auto mt-12 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="text-label-mono text-on-surface-variant">© 2024 BIOPODS INC. ALL RIGHTS RESERVED.</p>
+<div class="flex gap-8 text-label-mono text-on-surface-variant">
+<a class="hover:text-on-surface" href="#">PRIVACY_PROTOCOL</a>
+<a class="hover:text-on-surface" href="#">TERMS_OF_SERVICE</a>
+</div>
+</div>
+</footer>
+<!-- FAB (Contextual for Landing) -->
+<button class="fixed bottom-8 right-8 w-16 h-16 bg-tertiary text-on-tertiary rounded-full shadow-[0_0_20px_rgba(0,230,57,0.4)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40">
+<span class="material-symbols-outlined text-3xl">healing</span>
+</button>
+</body></html>

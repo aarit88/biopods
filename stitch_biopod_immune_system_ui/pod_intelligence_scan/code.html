@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BIOPODS - Neural Map Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#272a30",
+                        "on-secondary-container": "#00686f",
+                        "primary-container": "#05070a",
+                        "on-background": "#e1e2ea",
+                        "on-primary-fixed-variant": "#44474b",
+                        "surface-container-lowest": "#0b0e14",
+                        "tertiary-fixed-dim": "#00e639",
+                        "tertiary-container": "#000900",
+                        "on-error-container": "#ffdad6",
+                        "on-primary-container": "#76787d",
+                        "on-tertiary-container": "#008c1f",
+                        "surface-container": "#1d2026",
+                        "inverse-surface": "#e1e2ea",
+                        "primary": "#c5c6cb",
+                        "on-tertiary-fixed-variant": "#00530e",
+                        "surface-dim": "#101319",
+                        "surface-tint": "#c5c6cb",
+                        "on-surface-variant": "#c6c6ca",
+                        "on-surface": "#e1e2ea",
+                        "surface-variant": "#32353b",
+                        "on-tertiary": "#003907",
+                        "secondary-fixed-dim": "#00dbe9",
+                        "on-secondary-fixed": "#002022",
+                        "surface-container-highest": "#32353b",
+                        "on-error": "#690005",
+                        "primary-fixed": "#e1e2e7",
+                        "tertiary-fixed": "#72ff70",
+                        "secondary": "#d3fbff",
+                        "on-primary": "#2e3134",
+                        "tertiary": "#00e639",
+                        "on-tertiary-fixed": "#002203",
+                        "on-secondary": "#00363a",
+                        "outline-variant": "#45474a",
+                        "surface-container-low": "#191c22",
+                        "inverse-primary": "#5c5e63",
+                        "secondary-fixed": "#7df4ff",
+                        "secondary-container": "#00eefc",
+                        "inverse-on-surface": "#2d3037",
+                        "outline": "#8f9195",
+                        "background": "#101319",
+                        "surface-bright": "#363940",
+                        "on-primary-fixed": "#191c1f",
+                        "on-secondary-fixed-variant": "#004f54",
+                        "error": "#ffb4ab",
+                        "surface": "#101319",
+                        "error-container": "#93000a",
+                        "primary-fixed-dim": "#c5c6cb"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "container-padding": "32px",
+                        "panel-gap": "24px",
+                        "unit": "8px"
+                    },
+                    "fontFamily": {
+                        "h1": ["Space Grotesk"],
+                        "label-mono": ["Inter"],
+                        "h2": ["Space Grotesk"],
+                        "body-m": ["Inter"],
+                        "metric-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h1": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-mono": ["12px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                        "h2": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-m": ["16px", {"lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400"}],
+                        "metric-lg": ["40px", {"lineHeight": "1", "letterSpacing": "-0.04em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(25, 28, 34, 0.4);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: inset 0 0 20px rgba(0, 230, 57, 0.02);
+        }
+        .scanning-line {
+            background: linear-gradient(to bottom, transparent, rgba(0, 230, 57, 0.2), transparent);
+            height: 100px;
+            width: 100%;
+            position: absolute;
+            top: -100px;
+            left: 0;
+            animation: scan 4s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes scan {
+            0% { top: -100px; }
+            100% { top: 100%; }
+        }
+        .status-ring-critical {
+            border: 2px solid #ffb4ab;
+            box-shadow: 0 0 15px rgba(255, 180, 171, 0.4);
+            animation: breathe 2s infinite ease-in-out;
+        }
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+        }
+        .waveform {
+            mask-image: linear-gradient(to right, black, transparent);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-m selection:bg-tertiary selection:text-on-tertiary overflow-x-hidden">
+<!-- Header / TopNavBar -->
+<header class="flex justify-between items-center w-full px-container-padding py-4 z-50 docked full-width top-0 sticky bg-surface-container-low/60 backdrop-blur-xl border-b border-white/5 bg-gradient-to-r from-surface-container-low via-surface-container to-surface-container-low shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
+<div class="flex items-center gap-4">
+<img alt="BIOPODS Brand Mark" class="w-10 h-10 drop-shadow-[0_0_8px_rgba(0,230,57,0.5)]" data-alt="A futuristic, cinematic logo for BIOPODS featuring a stylized biological cell with glowing green and cyan neural pathways integrated into its digital membrane. The style is high-tech and minimal, set against a dark, deep space background with neon accents that emphasize its advanced AI biological monitoring purpose." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCz6Yz1m9lI8-Tt27siGPr3rYkRUij3T-JpCHbUkT4mkLN0jS6-xTxUzE1H7KfVELwV9UUhCZoJ0z-iDflTZacsC4GTtSOJ-L1DHVWM1nBX0YTA6ZFH12ynaYQ3IWIanScviR5fXFmlCYAg4111vCGxlenpY1ZWg9--7sD0mBmyOO2ZWt7gogOGJdi-s-2feiDnwL7wmH5L6n_8R_rvE_5SAZZs0W5zGzXqyf5HkoWqFIH-ZYX8mgqbcw1Bm8CfvClWhJoeqmvx7sY"/>
+<span class="font-h2 text-h2 uppercase tracking-tight font-bold text-tertiary drop-shadow-[0_0_8px_rgba(0,230,57,0.5)]">BIOPODS</span>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-on-surface-variant font-body-m hover:text-tertiary hover:drop-shadow-[0_0_5px_rgba(0,230,57,0.8)] transition-all duration-300" href="#">Cluster Status</a>
+<a class="text-tertiary border-b-2 border-tertiary pb-1 hover:text-tertiary hover:drop-shadow-[0_0_5px_rgba(0,230,57,0.8)] transition-all duration-300" href="#">Neural Map</a>
+<a class="text-on-surface-variant font-body-m hover:text-tertiary hover:drop-shadow-[0_0_5px_rgba(0,230,57,0.8)] transition-all duration-300" href="#">Immune Logs</a>
+</nav>
+<div class="flex items-center gap-6">
+<button class="px-6 py-2 bg-tertiary text-on-tertiary font-label-mono uppercase rounded-full hover:scale-105 transition-transform active:scale-95">Deploy Antibody</button>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-tertiary transition-colors" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-tertiary transition-colors" data-icon="settings">settings</span>
+</div>
+</header>
+<div class="flex min-h-screen">
+<!-- SideNavBar -->
+<aside class="hidden lg:flex flex-col h-full py-gutter z-40 docked left-0 h-screen w-64 fixed border-r border-white/10 bg-surface-container-lowest/80 backdrop-blur-2xl shadow-2xl">
+<div class="px-6 mb-10">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-tertiary/20 flex items-center justify-center border border-tertiary/40">
+<span class="material-symbols-outlined text-tertiary" data-icon="hub">hub</span>
+</div>
+<div>
+<h4 class="font-label-mono text-label-mono text-tertiary">Immune Core</h4>
+<p class="text-[10px] text-on-surface-variant uppercase">Vitals: Optimal</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-on-surface-variant hover:text-on-surface flex items-center gap-4 px-6 py-4 hover:bg-surface-container-highest/20 hover:translate-x-1 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span class="font-label-mono text-label-mono uppercase">Neural Spine</span>
+</a>
+<a class="bg-tertiary-container/30 text-tertiary border-r-4 border-tertiary flex items-center gap-4 px-6 py-4 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="healing">healing</span>
+<span class="font-label-mono text-label-mono uppercase">Antibodies</span>
+</a>
+<a class="text-on-surface-variant hover:text-on-surface flex items-center gap-4 px-6 py-4 hover:bg-surface-container-highest/20 hover:translate-x-1 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="biotech">biotech</span>
+<span class="font-label-mono text-label-mono uppercase">T-Cell HUD</span>
+</a>
+<a class="text-on-surface-variant hover:text-on-surface flex items-center gap-4 px-6 py-4 hover:bg-surface-container-highest/20 hover:translate-x-1 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-label-mono text-label-mono uppercase">Mutation Log</span>
+</a>
+<a class="text-on-surface-variant hover:text-on-surface flex items-center gap-4 px-6 py-4 hover:bg-surface-container-highest/20 hover:translate-x-1 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="schema">schema</span>
+<span class="font-label-mono text-label-mono uppercase">Bio-Settings</span>
+</a>
+</nav>
+<div class="px-6 py-8">
+<button class="w-full py-3 border border-error text-error font-label-mono uppercase hover:bg-error/10 transition-colors">Purge Threats</button>
+</div>
+<div class="mt-auto border-t border-white/5 pt-4">
+<a class="flex items-center gap-4 px-6 py-3 text-on-surface-variant hover:text-on-surface" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-label-mono text-label-mono uppercase">Help</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3 text-on-surface-variant hover:text-on-surface" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-label-mono text-label-mono uppercase">Docs</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 lg:ml-64 p-container-padding">
+<div class="max-w-7xl mx-auto">
+<!-- Hero Section: Pod Status -->
+<div class="flex flex-col lg:flex-row gap-panel-gap mb-panel-gap">
+<div class="flex-1 glass-panel rounded-xl p-gutter relative overflow-hidden group">
+<div class="scanning-line"></div>
+<div class="flex justify-between items-start">
+<div>
+<h1 class="font-h1 text-h1 text-tertiary">POD_DELTA_09</h1>
+<p class="font-label-mono text-on-surface-variant">NODE IDENTIFIER: ALPHA-772-BIOS</p>
+</div>
+<div class="flex flex-col items-end">
+<span class="bg-error/20 text-error px-4 py-1 rounded-full text-label-mono uppercase border border-error/30 animate-pulse">Critical Anomaly</span>
+<p class="text-on-surface-variant text-[10px] mt-2">UPTIME: 1,442 HRS</p>
+</div>
+</div>
+<div class="mt-12 grid grid-cols-2 md:grid-cols-4 gap-gutter">
+<div class="flex flex-col">
+<span class="text-on-surface-variant font-label-mono text-[10px] uppercase">Threat Score</span>
+<span class="font-metric-lg text-metric-lg text-error">88<span class="text-h2">%</span></span>
+</div>
+<div class="flex flex-col">
+<span class="text-on-surface-variant font-label-mono text-[10px] uppercase">Neural Sync</span>
+<span class="font-metric-lg text-metric-lg text-tertiary">94<span class="text-h2">%</span></span>
+</div>
+<div class="flex flex-col">
+<span class="text-on-surface-variant font-label-mono text-[10px] uppercase">Latent Stress</span>
+<span class="font-metric-lg text-metric-lg text-secondary-fixed-dim">12<span class="text-h2">ms</span></span>
+</div>
+<div class="flex flex-col">
+<span class="text-on-surface-variant font-label-mono text-[10px] uppercase">Cell Density</span>
+<span class="font-metric-lg text-metric-lg text-primary">High</span>
+</div>
+</div>
+</div>
+<div class="w-full lg:w-80 glass-panel rounded-xl p-gutter flex flex-col items-center justify-center gap-4 relative">
+<div class="w-32 h-32 rounded-full status-ring-critical flex items-center justify-center relative">
+<div class="w-24 h-24 rounded-full border-2 border-dashed border-error/40 animate-[spin_10s_linear_infinite]"></div>
+<span class="material-symbols-outlined text-error text-5xl absolute" data-icon="coronavirus" style="font-variation-settings: 'FILL' 1;">coronavirus</span>
+</div>
+<div class="text-center">
+<h3 class="font-h2 text-h2 text-error">DETECTED</h3>
+<p class="font-label-mono text-on-surface-variant uppercase text-[10px]">Polymorphic Intrusion</p>
+</div>
+<button class="w-full mt-4 bg-error text-on-error py-3 font-label-mono uppercase tracking-widest hover:brightness-110 transition-all">Isolation Protocol</button>
+</div>
+</div>
+<!-- Bento Grid Content -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-panel-gap">
+<!-- Resource Vitals (Waveforms) -->
+<div class="md:col-span-8 glass-panel rounded-xl p-gutter">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-h2 text-h2 text-on-surface flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary" data-icon="monitoring">monitoring</span>
+                                Resource Vitals
+                            </h3>
+<div class="flex gap-4">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-tertiary"></div>
+<span class="text-label-mono text-[10px] uppercase">CPU Synthesis</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-secondary-fixed-dim"></div>
+<span class="text-label-mono text-[10px] uppercase">RAM Metabolism</span>
+</div>
+</div>
+</div>
+<!-- CPU Waveform Mockup -->
+<div class="relative h-32 mb-8 waveform overflow-hidden border-b border-white/5">
+<svg class="absolute bottom-0 left-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 1000 100">
+<path class="opacity-80" d="M0 80 Q 50 20 100 85 T 200 60 T 300 90 T 400 30 T 500 70 T 600 20 T 700 80 T 800 50 T 900 80 T 1000 40" fill="none" stroke="#00e639" stroke-width="2"></path>
+<path class="opacity-20" d="M0 80 Q 50 20 100 85 T 200 60 T 300 90 T 400 30 T 500 70 T 600 20 T 700 80 T 800 50 T 900 80 T 1000 40" fill="url(#gradient-cpu)" stroke="none"></path>
+<defs>
+<lineargradient id="gradient-cpu" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#00e639"></stop>
+<stop offset="100%" stop-color="transparent"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+<!-- RAM Waveform Mockup -->
+<div class="relative h-32 waveform overflow-hidden">
+<svg class="absolute bottom-0 left-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 1000 100">
+<path class="opacity-80" d="M0 50 Q 50 70 100 40 T 200 60 T 300 45 T 400 75 T 500 55 T 600 85 T 700 50 T 800 65 T 900 40 T 1000 60" fill="none" stroke="#00dbe9" stroke-width="2"></path>
+<path class="opacity-20" d="M0 50 Q 50 70 100 40 T 200 60 T 300 45 T 400 75 T 500 55 T 600 85 T 700 50 T 800 65 T 900 40 T 1000 60" fill="url(#gradient-ram)" stroke="none"></path>
+<defs>
+<lineargradient id="gradient-ram" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#00dbe9"></stop>
+<stop offset="100%" stop-color="transparent"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+</div>
+<!-- Immune interactions -->
+<div class="md:col-span-4 glass-panel rounded-xl p-gutter">
+<h3 class="font-h2 text-h2 text-on-surface mb-6 flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary-fixed-dim" data-icon="shield_with_heart">shield_with_heart</span>
+                            Guardians
+                        </h3>
+<div class="space-y-4">
+<div class="flex items-center gap-4 p-3 border border-white/5 rounded-lg bg-surface-container-high/40">
+<div class="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/40">
+<span class="material-symbols-outlined text-tertiary" data-icon="security">security</span>
+</div>
+<div>
+<h4 class="text-label-mono text-tertiary uppercase">Sentinel-X</h4>
+<p class="text-[10px] text-on-surface-variant">Active Mitigation: Ongoing</p>
+</div>
+<div class="ml-auto w-2 h-2 rounded-full bg-tertiary animate-pulse"></div>
+</div>
+<div class="flex items-center gap-4 p-3 border border-white/5 rounded-lg bg-surface-container-high/40">
+<div class="w-10 h-10 rounded-full bg-secondary-fixed-dim/10 flex items-center justify-center border border-secondary-fixed-dim/40">
+<span class="material-symbols-outlined text-secondary-fixed-dim" data-icon="biotech">biotech</span>
+</div>
+<div>
+<h4 class="text-label-mono text-secondary-fixed-dim uppercase">Phage-99</h4>
+<p class="text-[10px] text-on-surface-variant">Scanning Neural Paths</p>
+</div>
+<div class="ml-auto w-2 h-2 rounded-full bg-secondary-fixed-dim"></div>
+</div>
+<div class="flex items-center gap-4 p-3 border border-white/5 rounded-lg bg-surface-container-high/40">
+<div class="w-10 h-10 rounded-full bg-on-surface-variant/10 flex items-center justify-center border border-on-surface-variant/40">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="verified_user">verified_user</span>
+</div>
+<div>
+<h4 class="text-label-mono text-on-surface-variant uppercase">Core Integrity</h4>
+<p class="text-[10px] text-on-surface-variant">Background Validation</p>
+</div>
+<div class="ml-auto w-2 h-2 rounded-full bg-on-surface-variant opacity-30"></div>
+</div>
+</div>
+</div>
+<!-- Active Antibodies -->
+<div class="md:col-span-4 glass-panel rounded-xl p-gutter">
+<h3 class="font-h2 text-h2 text-on-surface mb-6 flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary" data-icon="vaccines">vaccines</span>
+                            Active Antibodies
+                        </h3>
+<div class="grid grid-cols-2 gap-3">
+<div class="aspect-square glass-panel rounded-lg flex flex-col items-center justify-center p-4 border-tertiary/20">
+<span class="material-symbols-outlined text-tertiary text-3xl mb-2" data-icon="opacity">opacity</span>
+<span class="text-label-mono text-[10px] uppercase text-center">Cytokine-7</span>
+<span class="text-[10px] text-on-surface-variant mt-1">4.2mg/s</span>
+</div>
+<div class="aspect-square glass-panel rounded-lg flex flex-col items-center justify-center p-4 border-tertiary/20">
+<span class="material-symbols-outlined text-tertiary text-3xl mb-2" data-icon="microbiology">microbiology</span>
+<span class="text-label-mono text-[10px] uppercase text-center">B-Cell-Alpha</span>
+<span class="text-[10px] text-on-surface-variant mt-1">Active</span>
+</div>
+<div class="aspect-square glass-panel rounded-lg flex flex-col items-center justify-center p-4 opacity-50">
+<span class="material-symbols-outlined text-on-surface-variant text-3xl mb-2" data-icon="blur_circular">blur_circular</span>
+<span class="text-label-mono text-[10px] uppercase text-center">Plasma-12</span>
+<span class="text-[10px] text-on-surface-variant mt-1">Standby</span>
+</div>
+<div class="aspect-square glass-panel rounded-lg flex flex-col items-center justify-center p-4 opacity-50">
+<span class="material-symbols-outlined text-on-surface-variant text-3xl mb-2" data-icon="grain">grain</span>
+<span class="text-label-mono text-[10px] uppercase text-center">Lymph-Z</span>
+<span class="text-[10px] text-on-surface-variant mt-1">Depleted</span>
+</div>
+</div>
+</div>
+<!-- Dependency relationships (Visual Chart Mockup) -->
+<div class="md:col-span-4 glass-panel rounded-xl p-gutter overflow-hidden relative">
+<h3 class="font-h2 text-h2 text-on-surface mb-6 flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary-fixed-dim" data-icon="lan">lan</span>
+                            Dependencies
+                        </h3>
+<div class="flex items-center justify-center h-48 relative">
+<!-- SVG for animated lines -->
+<svg class="absolute inset-0 w-full h-full">
+<path class="opacity-30" d="M 50,50 L 150,50 M 150,50 L 150,150 M 150,50 L 250,50" fill="none" stroke="#00e639" stroke-dasharray="4,4" stroke-width="1"></path>
+</svg>
+<div class="relative z-10 flex flex-col items-center gap-6">
+<div class="p-2 border border-tertiary bg-tertiary/10 rounded flex items-center gap-2">
+<span class="text-[10px] font-label-mono text-tertiary uppercase">Pod_Delta_09</span>
+</div>
+<div class="flex gap-12">
+<div class="p-2 border border-white/10 bg-white/5 rounded flex items-center gap-2">
+<span class="text-[10px] font-label-mono text-on-surface-variant uppercase">Upstream: Core_A</span>
+</div>
+<div class="p-2 border border-white/10 bg-white/5 rounded flex items-center gap-2">
+<span class="text-[10px] font-label-mono text-on-surface-variant uppercase">Down: Pod_E_12</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Anomaly History (Timeline style) -->
+<div class="md:col-span-4 glass-panel rounded-xl p-gutter">
+<h3 class="font-h2 text-h2 text-on-surface mb-6 flex items-center gap-3">
+<span class="material-symbols-outlined text-error" data-icon="history_edu">history_edu</span>
+                            Anomaly Log
+                        </h3>
+<div class="space-y-6 relative before:content-[''] before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-white/10">
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-error/20 border border-error flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-error"></div>
+</div>
+<span class="text-[10px] font-label-mono text-on-surface-variant">09:42:12 UTC</span>
+<p class="text-on-surface text-sm font-medium">Memory leak in Neural Cell 4</p>
+</div>
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-tertiary/20 border border-tertiary flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-tertiary"></div>
+</div>
+<span class="text-[10px] font-label-mono text-on-surface-variant">08:15:44 UTC</span>
+<p class="text-on-surface text-sm font-medium">Antibody Deployment Success</p>
+</div>
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-error/20 border border-error flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-error"></div>
+</div>
+<span class="text-[10px] font-label-mono text-on-surface-variant">06:01:02 UTC</span>
+<p class="text-on-surface text-sm font-medium">Unauthorized Neural Mapping</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Background Bio-Glow Effects -->
+<div class="fixed inset-0 -z-50 pointer-events-none overflow-hidden">
+<div class="absolute top-1/4 -right-20 w-[600px] h-[600px] bg-tertiary/5 rounded-full blur-[150px]"></div>
+<div class="absolute -bottom-20 -left-20 w-[500px] h-[500px] bg-secondary-fixed-dim/5 rounded-full blur-[120px]"></div>
+<div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(0,230,57,0.02)_0%,transparent_70%)]"></div>
+</div>
+</body></html>
