@@ -25,5 +25,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Vite
-*.local
+# SQLite
+*.db
+*.db-journal

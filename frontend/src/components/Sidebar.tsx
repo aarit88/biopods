@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useSocket } from '../hooks/useSocket';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -42,6 +42,8 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
+  const { isConnected } = useSocket();
+
   return (
     <aside className={cn(
       "w-64 h-screen bg-bio-darker border-r border-white/5 flex flex-col fixed left-0 top-0 z-[60] transition-all duration-500 ease-in-out shadow-[20px_0_50px_rgba(0,0,0,0.5)]",
@@ -50,7 +52,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       <div className="p-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-bio-green/20 border border-bio-green/40 rounded-full flex items-center justify-center">
-            <div className="w-4 h-4 bg-bio-green rounded-full animate-pulse-slow shadow-[0_0_10px_rgba(0,255,128,0.8)]" />
+            <div className={cn(
+              "w-4 h-4 rounded-full animate-pulse-slow shadow-[0_0_10px_rgba(0,255,128,0.8)]",
+              isConnected ? "bg-bio-green" : "bg-bio-red shadow-[0_0_10px_rgba(255,61,0,0.8)]"
+            )} />
           </div>
           <span className="text-xl font-display font-bold tracking-wider text-white">BIOPODS</span>
         </div>
@@ -93,12 +98,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
 
       <div className="p-6 mt-auto border-t border-white/5">
         <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
-          <div className="w-10 h-10 rounded-full bg-bio-green/20 flex items-center justify-center text-bio-green font-bold">
-            88
+          <div className={cn(
+            "w-10 h-10 rounded-full flex items-center justify-center font-bold",
+            isConnected ? "bg-bio-green/20 text-bio-green shadow-[0_0_15px_rgba(0,255,128,0.1)]" : "bg-bio-red/20 text-bio-red shadow-[0_0_15px_rgba(255,61,0,0.1)]"
+          )}>
+            {isConnected ? '98' : '--'}
           </div>
           <div className="flex flex-col">
             <span className="text-xs font-bold text-white uppercase tracking-tighter">System Status</span>
-            <span className="text-[10px] text-bio-green animate-pulse">Vitals: Optimal</span>
+            <span className={cn(
+              "text-[10px] uppercase font-black tracking-widest",
+              isConnected ? "text-bio-green animate-pulse" : "text-bio-red"
+            )}>
+              {isConnected ? 'Link Active' : 'Disconnected'}
+            </span>
           </div>
         </div>
       </div>

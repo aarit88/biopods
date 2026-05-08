@@ -9,27 +9,31 @@ class SocketService {
     this.socket = io(SOCKET_URL);
 
     this.socket.on('connect', () => {
-      console.log('Neural Link Established with Visualization Hub');
+      console.log('🧬 BioPods Neural Link Established');
       this.socket?.emit('join_cluster', 'global');
     });
 
     return this.socket;
   }
 
-  onPodUpdate(callback: (data: any) => void) {
-    this.socket?.on('podHealthUpdate', callback);
+  onTelemetryStream(callback: (data: any) => void) {
+    this.socket?.on('telemetry:stream', callback);
   }
 
-  onDangerScore(callback: (data: any) => void) {
-    this.socket?.on('dangerScore', callback);
+  onPodDangerUpdate(callback: (data: any) => void) {
+    this.socket?.on('pod:danger:update', callback);
   }
 
   onThreatDetected(callback: (data: any) => void) {
-    this.socket?.on('threatDetected', callback);
+    this.socket?.on('threat:detected', callback);
   }
 
-  onActionExecuted(callback: (data: any) => void) {
-    this.socket?.on('actionExecuted', callback);
+  onImmuneResponseStarted(callback: (data: any) => void) {
+    this.socket?.on('immune:response:started', callback);
+  }
+
+  onClusterHealthUpdate(callback: (data: any) => void) {
+    this.socket?.on('cluster:health:update', callback);
   }
 
   disconnect() {

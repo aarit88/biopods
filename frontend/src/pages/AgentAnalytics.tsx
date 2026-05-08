@@ -1,8 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BioCard } from '../components/ui/BioCard';
 import { BarChart3, TrendingUp, Users, Target } from 'lucide-react';
+import { apiService } from '../services/api';
 
 export const AgentAnalytics: React.FC = () => {
+  const [agents, setAgents] = useState<any[]>([]);
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const { data } = await apiService.agents.list();
+        setAgents(data);
+      } catch (e) {
+        console.error("Failed to fetch agents", e);
+      }
+    };
+    fetchAgents();
+  }, []);
+
+  const stats = [
+    { label: 'Total Agents', val: agents.length.toString(), icon: Users, color: 'text-bio-cyan' },
+    { label: 'Avg Confidence', val: (agents.reduce((acc, a) => acc + (a.confidenceScore || 0), 0) / (agents.length || 1)).toFixed(1) + '%', icon: TrendingUp, color: 'text-bio-green' },
+    { label: 'Learning Load', val: (agents.reduce((acc, a) => acc + (a.learningScore || 0), 0) / (agents.length || 1)).toFixed(1) + '%', icon: Target, color: 'text-bio-red' },
+    { label: 'Uptime', val: 'Active', icon: BarChart3, color: 'text-bio-amber' },
+  ];
+
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-4">
@@ -16,12 +37,7 @@ export const AgentAnalytics: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[
-          { label: 'Total Agents', val: '24', icon: Users, color: 'text-bio-cyan' },
-          { label: 'Avg Efficiency', val: '94.2%', icon: TrendingUp, color: 'text-bio-green' },
-          { label: 'Neutralized', val: '1.2k', icon: Target, color: 'text-bio-red' },
-          { label: 'Uptime', val: '342d', icon: BarChart3, color: 'text-bio-amber' },
-        ].map((stat, i) => (
+        {stats.map((stat, i) => (
           <BioCard key={i} className="p-6">
             <stat.icon size={20} className={`${stat.color} mb-4`} />
             <div className="text-3xl font-display font-bold text-white">{stat.val}</div>

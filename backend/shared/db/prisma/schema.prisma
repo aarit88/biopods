@@ -3,97 +3,161 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-enum Role {
-  ADMIN
-  OPERATOR
-  OBSERVER
-}
-
-enum PodHealth {
-  HEALTHY
-  WARNING
-  DANGER
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  role      Role     @default(OBSERVER)
-  sessions  Session[]
-  createdAt DateTime @default(now())
-}
+  id            String   @id @default(uuid())
+  fullName      String   @map("full_name")
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  role          String   @default("observer")
+  avatarUrl     String?  @map("avatar_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
 
-model Session {
-  id           String   @id @default(uuid())
-  userId       String
-  refreshToken String   @unique
-  expiresAt    DateTime
-  user         User     @relation(fields: [userId], references: [id])
+  @@map("users")
 }
 
 model Cluster {
-  id        String   @id @default(uuid())
-  name      String
-  kubeconfig String  
-  nodes     Node[]
-  pods      Pod[]
+  id                String   @id @default(uuid())
+  clusterName       String   @map("cluster_name")
+  environment       String?
+  region            String?
+  kubernetesVersion String?  @map("kubernetes_version")
+  totalNodes        Int?     @map("total_nodes")
+  status            String?  @default("healthy")
+  immunityScore     Float?   @map("immunity_score")
+  createdAt         DateTime @default(now()) @map("created_at")
+  nodes             Node[]
+  pods              Pod[]
+
+  @@map("clusters")
 }
 
 model Node {
-  id        String   @id @default(uuid())
-  clusterId String
-  name      String
-  status    String   
-  cluster   Cluster  @relation(fields: [clusterId], references: [id])
+  id           String   @id @default(uuid())
+  clusterId    String?  @map("cluster_id")
+  nodeName     String?  @map("node_name")
+  cpuUsage     Float?   @map("cpu_usage")
+  memoryUsage  Float?   @map("memory_usage")
+  diskUsage    Float?   @map("disk_usage")
+  networkUsage Float?   @map("network_usage")
+  nodeStatus   String?  @map("node_status")
+  healthScore  Float?   @map("health_score")
+  createdAt    DateTime @default(now()) @map("created_at")
+  cluster      Cluster? @relation(fields: [clusterId], references: [id])
+  pods         Pod[]
+
+  @@map("nodes")
 }
 
 model Pod {
+  id              String   @id @default(uuid())
+  clusterId       String?  @map("cluster_id")
+  nodeId          String?  @map("node_id")
+  podName         String?  @map("pod_name")
+  namespace       String?
+  cpuUsage        Float?   @map("cpu_usage")
+  memoryUsage     Float?   @map("memory_usage")
+  pvcLatency      Float?   @map("pvc_latency")
+  networkTraffic  Float?   @map("network_traffic")
+  podStatus       String?  @map("pod_status")
+  dangerLevel     String?  @map("danger_level")
+  immunityState   String?  @map("immunity_state")
+  dependencyCount Int?     @map("dependency_count")
+  createdAt       DateTime @default(now()) @map("created_at")
+  cluster         Cluster? @relation(fields: [clusterId], references: [id])
+  node            Node?    @relation(fields: [nodeId], references: [id])
+  telemetry       Telemetry[]
+  dangerEvents    DangerEvent[]
+
+  @@map("pods")
+}
+
+model Telemetry {
   id          String   @id @default(uuid())
-  clusterId   String
-  name        String
-  namespace   String
-  health      PodHealth @default(HEALTHY)
-  cluster     Cluster   @relation(fields: [clusterId], references: [id])
-  dangerEvents DangerEvent[]
+  podId       String?  @map("pod_id")
+  cpuUsage    Float?   @map("cpu_usage")
+  memoryUsage Float?   @map("memory_usage")
+  diskIo      Float?   @map("disk_io")
+  networkIn   Float?   @map("network_in")
+  networkOut  Float?   @map("network_out")
+  pvcLatency  Float?   @map("pvc_latency")
+  signalType  String?  @map("signal_type")
+  recordedAt  DateTime @default(now()) @map("recorded_at")
+  pod         Pod?     @relation(fields: [podId], references: [id])
+
+  @@map("telemetry")
 }
 
 model DangerEvent {
-  id        String   @id @default(uuid())
-  podId     String
-  score     Float
-  label     PodHealth
-  timestamp DateTime @default(now())
-  pod       Pod      @relation(fields: [podId], references: [id])
-  verifiedThreats VerifiedThreat[]
+  id              String   @id @default(uuid())
+  podId           String?  @map("pod_id")
+  eventType       String?  @map("event_type")
+  dangerScore     Float?   @map("danger_score")
+  severity        String?
+  infectionZone   String?  @map("infection_zone")
+  status          String?
+  detectedBy      String?  @map("detected_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  pod             Pod?     @relation(fields: [podId], references: [id])
+  immuneResponses ImmuneResponse[]
+
+  @@map("danger_events")
 }
 
-model VerifiedThreat {
-  id            String   @id @default(uuid())
-  dangerEventId String
-  confidence    Float
-  actionTaken   String?
-  threatType    String   
-  timestamp     DateTime @default(now())
-  dangerEvent   DangerEvent @relation(fields: [dangerEventId], references: [id])
+model ImmuneAgent {
+  id              String   @id @default(uuid())
+  agentName       String?  @map("agent_name")
+  agentType       String?  @map("agent_type")
+  status          String?
+  confidenceScore Float?   @map("confidence_score")
+  learningScore   Float?   @map("learning_score")
+  assignedZone    String?  @map("assigned_zone")
+  activeTarget    String?  @map("active_target")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("immune_agents")
 }
 
-model Antibody {
-  id             String   @id @default(uuid())
-  threatPattern  String   
-  actionPlan     Json     
-  affinity       Float
-  createdAt      DateTime @default(now())
+model ImmuneResponse {
+  id              String   @id @default(uuid())
+  eventId         String?  @map("event_id")
+  responseType    String?  @map("response_type")
+  actionTaken     String?  @map("action_taken")
+  successRate     Float?   @map("success_rate")
+  responseTimeMs  Int?     @map("response_time_ms")
+  triggeredBy     String?  @map("triggered_by")
+  responseStatus  String?  @map("response_status")
+  createdAt       DateTime @default(now()) @map("created_at")
+  dangerEvent     DangerEvent? @relation(fields: [eventId], references: [id])
+
+  @@map("immune_responses")
+}
+
+model MemoryCell {
+  id                 String    @id @default(uuid())
+  threatSignature    String?   @map("threat_signature")
+  vectorId           String?   @map("vector_id")
+  mitigationStrategy String?   @map("mitigation_strategy")
+  affinityScore      Float?    @map("affinity_score")
+  successCount       Int?      @map("success_count")
+  lastSeen           DateTime? @map("last_seen")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  @@map("memory_cells")
 }
 
 model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String?
-  action    String
-  details   Json
-  timestamp DateTime @default(now())
+  id                String   @id @default(uuid())
+  actionType        String?  @map("action_type")
+  actionDescription String?  @map("action_description")
+  performedBy       String?  @map("performed_by")
+  targetResource    String?  @map("target_resource")
+  status            String?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
 }

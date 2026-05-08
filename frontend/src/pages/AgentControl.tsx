@@ -8,10 +8,10 @@ import confetti from 'canvas-confetti';
 
 interface Agent {
   id: string;
-  name: string;
+  agentName: string;
   status: string;
-  type: string;
-  efficiency: string;
+  agentType: string;
+  confidenceScore: number;
 }
 
 export const AgentControl: React.FC = () => {
@@ -47,7 +47,7 @@ export const AgentControl: React.FC = () => {
       await apiService.agents.control(id, action);
       addLog(`Signal ACK: ${name} is now processing ${action} protocol.`);
       setAgents(prev => prev.map(a => 
-        a.id === id ? { ...a, status: action === 'START' ? 'Active' : action === 'STOP' ? 'Standby' : 'Resetting' } : a
+        a.id === id ? { ...a, status: action === 'START' ? 'active' : action === 'STOP' ? 'standby' : 'resetting' } : a
       ));
     } catch (e) {
       addLog(`Error: Agent ${name} failed to acknowledge ${action} signal.`);
@@ -75,15 +75,15 @@ export const AgentControl: React.FC = () => {
     const newId = `syn-${Math.floor(Math.random() * 1000)}`;
     const newAgent: Agent = {
       id: newId,
-      name: `Antibody-${newId.split('-')[1]}`,
-      status: 'Active',
-      type: 'Defense',
-      efficiency: '100%'
+      agentName: `Antibody-${newId.split('-')[1]}`,
+      status: 'active',
+      agentType: 'Defense',
+      confidenceScore: 100
     };
     
     setAgents(prev => [newAgent, ...prev]);
     setIsSynthesizing(false);
-    addLog(`Agent ${newAgent.name} successfully synthesized and deployed.`);
+    addLog(`Agent ${newAgent.agentName} successfully synthesized and deployed.`);
     
     confetti({
       particleCount: 100,
@@ -95,6 +95,22 @@ export const AgentControl: React.FC = () => {
 
   return (
     <div className="space-y-8 relative">
+      {/* Cinematic Neural Stream Background */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] overflow-hidden -z-10">
+        <div className="flex gap-4 h-full">
+          {[...Array(10)].map((_, i) => (
+            <motion.div 
+              key={i}
+              animate={{ y: ['-100%', '100%'] }}
+              transition={{ duration: Math.random() * 20 + 20, repeat: Infinity, ease: "linear", delay: i * 2 }}
+              className="text-[10px] font-mono break-all w-8 leading-none text-bio-green"
+            >
+              {Array.from({ length: 50 }).map(() => Math.round(Math.random())).join('\n')}
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
       {/* Synthesis Modal */}
       <AnimatePresence>
         {isSynthesizing && (
@@ -173,12 +189,12 @@ export const AgentControl: React.FC = () => {
                         <Microscope className="text-bio-green" size={24} />
                       </div>
                       <div>
-                        <h4 className="text-lg font-bold text-white group-hover:text-bio-green transition-colors">{agent.name}</h4>
-                        <span className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">{agent.type} Module</span>
+                        <h4 className="text-lg font-bold text-white group-hover:text-bio-green transition-colors">{agent.agentName}</h4>
+                        <span className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">{agent.agentType} Module</span>
                       </div>
                     </div>
-                    <div className={`flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 ${agent.status === 'Active' ? 'bg-bio-green/10 border-bio-green/20 text-bio-green' : 'bg-white/5 text-slate-400'}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${agent.status === 'Active' ? 'bg-bio-green animate-pulse' : 'bg-slate-600'}`} />
+                    <div className={`flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 ${agent.status === 'active' ? 'bg-bio-green/10 border-bio-green/20 text-bio-green' : 'bg-white/5 text-slate-400'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${agent.status === 'active' ? 'bg-bio-green animate-pulse' : 'bg-slate-600'}`} />
                       <span className="text-[9px] font-black uppercase tracking-widest">{agent.status}</span>
                     </div>
                   </div>
@@ -186,13 +202,13 @@ export const AgentControl: React.FC = () => {
                   <div className="flex items-center justify-between mb-8 px-5 py-4 bg-bio-darker rounded-2xl border border-white/5 relative overflow-hidden">
                     <div className="absolute inset-0 bg-bio-green/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div className="relative z-10">
-                      <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Efficiency Index</span>
-                      <div className="text-2xl font-display font-black text-white italic">{agent.efficiency}</div>
+                      <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Confidence Index</span>
+                      <div className="text-2xl font-display font-black text-white italic">{agent.confidenceScore}%</div>
                     </div>
                     <div className="relative z-10 w-24 h-1.5 bg-white/5 rounded-full overflow-hidden">
                       <motion.div 
                         initial={{ width: 0 }}
-                        animate={{ width: agent.efficiency }}
+                        animate={{ width: `${agent.confidenceScore}%` }}
                         className="h-full bg-bio-green rounded-full shadow-[0_0_10px_rgba(0,255,128,0.5)]"
                       />
                     </div>
@@ -200,19 +216,19 @@ export const AgentControl: React.FC = () => {
 
                   <div className="grid grid-cols-3 gap-3">
                     <button 
-                      onClick={() => handleControl(agent.id, agent.name, 'START')}
+                      onClick={() => handleControl(agent.id, agent.agentName, 'START')}
                       className="flex items-center justify-center gap-2 py-2.5 bg-white/5 rounded-xl border border-white/10 text-[9px] font-black text-slate-400 hover:text-bio-green hover:bg-bio-green/10 hover:border-bio-green/20 transition-all uppercase tracking-widest active:scale-95"
                     >
                       <Play size={14} fill="currentColor" /> START
                     </button>
                     <button 
-                      onClick={() => handleControl(agent.id, agent.name, 'STOP')}
+                      onClick={() => handleControl(agent.id, agent.agentName, 'STOP')}
                       className="flex items-center justify-center gap-2 py-2.5 bg-white/5 rounded-xl border border-white/10 text-[9px] font-black text-slate-400 hover:text-bio-red hover:bg-bio-red/10 hover:border-bio-red/20 transition-all uppercase tracking-widest active:scale-95"
                     >
                       <Square size={14} fill="currentColor" /> STOP
                     </button>
                     <button 
-                      onClick={() => handleControl(agent.id, agent.name, 'RESET')}
+                      onClick={() => handleControl(agent.id, agent.agentName, 'RESET')}
                       className="flex items-center justify-center gap-2 py-2.5 bg-white/5 rounded-xl border border-white/10 text-[9px] font-black text-slate-400 hover:text-bio-cyan hover:bg-bio-cyan/10 hover:border-bio-cyan/20 transition-all uppercase tracking-widest active:scale-95"
                     >
                       <RefreshCcw size={14} /> RESET

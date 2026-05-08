@@ -1,5 +1,5 @@
 {
-  "name": "@biopods/visualization-hub",
+  "name": "@biopods/ollama-service",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -8,12 +8,11 @@
     "build": "tsc"
   },
   "dependencies": {
-    "socket.io": "^4.7.2",
-    "dotenv": "^16.3.1",
-    "nats": "^2.17.0",
-    "ioredis": "^5.3.2"
+    "axios": "^1.6.7",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
-    "tsx": "^4.7.0"
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
   }
 }

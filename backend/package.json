@@ -8,10 +8,11 @@
     "shared/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev -w @biopods/api-gateway\" \"npm run dev -w @biopods/visualization-hub\" \"npm run dev -w @biopods/telemetry-ingest\" \"npm run dev -w @biopods/self-heal\"",
+    "dev": "concurrently \"npm run dev -w @biopods/api-gateway\" \"npm run dev -w @biopods/visualization-hub\" \"npm run dev -w @biopods/telemetry-ingest\" \"npm run dev -w @biopods/self-heal\" \"npm run dev -w @biopods/ollama-service\"",
     "build": "npm run build -w services/*",
     "db:generate": "npm run generate -w shared/db",
-    "db:push": "npm run push -w shared/db"
+    "db:push": "npm run push -w shared/db",
+    "db:seed": "npm run seed -w shared/db"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

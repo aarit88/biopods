@@ -35,6 +35,12 @@ export const apiService = {
   actions: {
     execute: (podId: string, actionType: string) => api.post('/actions/execute', { podId, actionType }),
   },
+  memoryCells: {
+    list: () => api.get('/memory-cells'),
+  },
+  auditLogs: {
+    list: () => api.get('/audit-logs'),
+  },
 };
 
 export default api;

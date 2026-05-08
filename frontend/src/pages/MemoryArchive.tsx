@@ -1,20 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BioCard } from '../components/ui/BioCard';
 import { Database, Search, History, Download, HardDrive, Cpu, Archive, FileJson, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiService } from '../services/api';
 
 export const MemoryArchive: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [storageUsed] = useState(72);
   const [historyData] = useState([40, 60, 35, 80, 55, 90, 75, 85, 45, 95]);
+  const [memoryCells, setMemoryCells] = useState<any[]>([]);
 
-  const recentExtractions = [
-    { id: 'MEM-01X', type: 'THREAT_SIG', size: '24KB', date: '2026-05-06 14:22', hash: 'SHA256:8821...AF22' },
-    { id: 'MEM-02X', type: 'AGENT_LOG', size: '1.2MB', date: '2026-05-06 14:10', hash: 'SHA256:7732...BB11' },
-    { id: 'MEM-03X', type: 'HEURISTIC', size: '440KB', date: '2026-05-06 13:55', hash: 'SHA256:1120...CC09' },
-    { id: 'MEM-04X', type: 'DNA_SNAPSHOT', size: '4.8MB', date: '2026-05-06 12:30', hash: 'SHA256:9901...DD88' },
-  ];
+  useEffect(() => {
+    const fetchMemory = async () => {
+      try {
+        const response = await apiService.memoryCells.list();
+        setMemoryCells(response.data);
+      } catch (error) {
+        console.error("Failed to fetch memory cells", error);
+      }
+    };
+    fetchMemory();
+  }, []);
 
   const handleExport = () => {
     setIsExporting(true);
@@ -30,10 +37,6 @@ export const MemoryArchive: React.FC = () => {
     }
   };
 
-  const filteredExtractions = recentExtractions.filter(ex => 
-    ex.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    ex.type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="space-y-8">
@@ -183,7 +186,10 @@ export const MemoryArchive: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-white/5">
               <AnimatePresence mode="popLayout">
-                {filteredExtractions.map((ex, i) => (
+                {memoryCells.filter(ex => 
+                  ex.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                  ex.threatSignature?.toLowerCase().includes(searchTerm.toLowerCase())
+                ).map((ex, i) => (
                   <motion.tr 
                     key={ex.id}
                     initial={{ opacity: 0, y: 10 }}
@@ -191,16 +197,16 @@ export const MemoryArchive: React.FC = () => {
                     transition={{ delay: i * 0.1 }}
                     className="hover:bg-bio-cyan/5 group transition-colors"
                   >
-                    <td className="px-8 py-4 font-mono text-[10px] text-bio-cyan font-bold">{ex.id}</td>
+                    <td className="px-8 py-4 font-mono text-[10px] text-bio-cyan font-bold">{ex.id.substring(0, 8)}</td>
                     <td className="px-8 py-4">
                       <div className="flex items-center gap-3">
                         <FileJson size={14} className="text-slate-500 group-hover:text-bio-cyan transition-colors" />
-                        <span className="text-xs font-bold text-white tracking-tight uppercase">{ex.type}</span>
+                        <span className="text-xs font-bold text-white tracking-tight uppercase">{ex.threatSignature || 'NEURAL_PATTERN'}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-4 text-[10px] text-slate-400 font-mono italic">{ex.size}</td>
-                    <td className="px-8 py-4 text-[10px] text-slate-600 font-mono uppercase">{ex.hash}</td>
-                    <td className="px-8 py-4 text-[10px] text-slate-500 font-mono">{ex.date}</td>
+                    <td className="px-8 py-4 text-[10px] text-slate-400 font-mono italic">{ex.successCount || 0} hits</td>
+                    <td className="px-8 py-4 text-[10px] text-slate-600 font-mono uppercase">{ex.vectorId || 'VEC-NONE'}</td>
+                    <td className="px-8 py-4 text-[10px] text-slate-500 font-mono">{new Date(ex.createdAt).toLocaleString()}</td>
                     <td className="px-8 py-4 text-right">
                       <button 
                         onClick={() => handleRestore(ex.id)}

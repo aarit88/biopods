@@ -3,6 +3,7 @@ import { BioCard } from '../components/ui/BioCard';
 import { Stethoscope, Activity, Heart, RefreshCw, Zap, ShieldAlert, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
 import { BioButton } from '../components/ui/BioButton';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSocket } from '../hooks/useSocket';
 
 interface Procedure {
   id: string;
@@ -13,11 +14,21 @@ interface Procedure {
 }
 
 export const HealingCenter: React.FC = () => {
-  const [procedures, setProcedures] = useState<Procedure[]>([
-    { id: '1', name: 'Antibody Synthesis: Node-Beta', progress: 65, time: '2:40 remaining', status: 'healing' },
-    { id: '2', name: 'Pod-Sigma Rejuvenation', progress: 42, time: '1:15 remaining', status: 'healing' },
-    { id: '3', name: 'Neural Spine Recalibration', progress: 88, time: '0:12 remaining', status: 'healing' },
-  ]);
+  const { immuneResponses } = useSocket();
+  const [procedures, setProcedures] = useState<Procedure[]>([]);
+
+  useEffect(() => {
+    if (immuneResponses.length > 0) {
+      const newProcedures: Procedure[] = immuneResponses.map((res: any) => ({
+        id: res.requestId || Math.random().toString(),
+        name: `${res.actionType}: ${res.podId}`,
+        progress: 10,
+        time: 'Estimating...',
+        status: 'healing'
+      }));
+      setProcedures(prev => [...newProcedures, ...prev].slice(0, 5));
+    }
+  }, [immuneResponses]);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [vitals, setVitals] = useState({ metabolic: 94, antibody: 88 });

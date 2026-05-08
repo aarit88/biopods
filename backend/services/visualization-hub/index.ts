@@ -1,11 +1,33 @@
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { natsClient } from '../../shared/messaging/index.ts';
+import Redis from 'ioredis';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const httpServer = createServer();
+const httpServer = createServer(async (req, res) => {
+  // HTTP Event Bridge for Non-Docker Setup
+  if (req.method === 'POST' && req.url === '/api/events') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        const { subject, data } = JSON.parse(body);
+        handleEvent(subject, data);
+        res.writeHead(200);
+        res.end('ok');
+      } catch (e) {
+        res.writeHead(400);
+        res.end('error');
+      }
+    });
+  } else {
+    res.writeHead(404);
+    res.end();
+  }
+});
+
 const io = new Server(httpServer, {
   cors: {
     origin: "*",
@@ -13,10 +35,40 @@ const io = new Server(httpServer, {
   }
 });
 
+// Mock Redis Fallback
+let redis: any;
+try {
+  redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+    maxRetriesPerRequest: 1,
+    retryStrategy: () => null
+  });
+  redis.on('error', () => {
+    console.warn('⚠️ Redis connection failed. Using In-Memory cache.');
+    redis = new Map(); // Simple mock
+  });
+} catch (e) {
+  redis = new Map();
+}
+
 const PORT = process.env.PORT || 3001;
 
+const handleEvent = (subject: string, data: any) => {
+  if (subject === 'telemetry.raw') {
+    io.to(`cluster:${data.clusterId || 'global'}`).emit('telemetry:stream', data);
+    io.emit('cluster:health:update', { clusterId: data.clusterId, health: Math.random() * 100 });
+  } else if (subject === 'danger.score') {
+    if (redis instanceof Map) redis.set(`danger:active:${data.podId}`, JSON.stringify(data));
+    else redis.set(`danger:active:${data.podId}`, JSON.stringify(data), 'EX', 3600).catch(() => {});
+    io.emit('pod:danger:update', data);
+  } else if (subject === 'action.execute') {
+    io.emit('immune:response:started', data);
+  } else if (subject === 'threat.verified') {
+    io.emit('threat:detected', data);
+  }
+};
+
 io.on('connection', (socket) => {
-  console.log(`Neural Link Established: ${socket.id}`);
+  console.log(`🧬 Neural Link Established: ${socket.id}`);
 
   socket.on('join_cluster', (clusterId) => {
     socket.join(`cluster:${clusterId}`);
@@ -24,54 +76,21 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log(`Neural Link Severed: ${socket.id}`);
+    console.log(`🧬 Neural Link Severed: ${socket.id}`);
   });
 });
 
-// NATS Subscriptions to forward events to WebSockets
 const startNeuralForwarding = async () => {
   await natsClient.connect(process.env.NATS_URL || 'nats://localhost:4222');
+  console.log('📡 Visualization Hub: Neural Forwarding Active...');
 
-  // If we are in mock mode, start generating synthetic events for the UI
-  if ((natsClient as any).isMock) {
-    console.log('Neural Forwarding in MOCK MODE: Generating synthetic petri dish activity...');
-    setInterval(() => {
-      const mockUpdate = {
-        podId: `pod-${Math.floor(Math.random() * 10)}`,
-        metrics: { cpu: Math.random() * 100, memory: Math.random() * 1024 },
-        timestamp: new Date()
-      };
-      io.to('cluster:global').emit('podHealthUpdate', mockUpdate);
-      
-      if (Math.random() > 0.8) {
-        io.emit('dangerScore', { podId: mockUpdate.podId, score: 85, label: 'DANGER' });
-      }
-    }, 2000);
-    return;
-  }
-
-  // Real NATS forwarding
-  natsClient.subscribe('telemetry.raw', (data) => {
-    io.to(`cluster:${data.clusterId || 'global'}`).emit('podHealthUpdate', data);
-  });
-
-  // Forward Danger Scores
-  natsClient.subscribe('danger.score', (data) => {
-    io.emit('dangerScore', data);
-  });
-
-  // Forward Verified Threats
-  natsClient.subscribe('threat.verified', (data) => {
-    io.emit('threatDetected', data);
-  });
-
-  // Forward Actions
-  natsClient.subscribe('action.execute', (data) => {
-    io.emit('actionExecuted', data);
-  });
+  natsClient.subscribe('telemetry.raw', (data) => handleEvent('telemetry.raw', data));
+  natsClient.subscribe('danger.score', (data) => handleEvent('danger.score', data));
+  natsClient.subscribe('action.execute', (data) => handleEvent('action.execute', data));
+  natsClient.subscribe('threat.verified', (data) => handleEvent('threat.verified', data));
 };
 
 httpServer.listen(PORT, () => {
-  console.log(`BioPods Visualization Hub running on port ${PORT}`);
+  console.log(`🎨 BioPods Visualization Hub running on port ${PORT}`);
   startNeuralForwarding().catch(console.error);
 });

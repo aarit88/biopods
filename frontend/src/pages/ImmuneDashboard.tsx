@@ -12,19 +12,45 @@ import {
 import { useSocket } from '../hooks/useSocket';
 import { apiService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Skeleton } from '../components/ui/Skeleton';
 
 export const ImmuneDashboard: React.FC = () => {
-  const { lastTelemetry, anomalies, isConnected } = useSocket();
+  const { lastTelemetry, anomalies: socketAnomalies, isConnected } = useSocket();
   const [healthScore, setHealthScore] = useState(98);
   const [activeThreats, setActiveThreats] = useState(0);
   const [protocolActive, setProtocolActive] = useState<string | null>(null);
+  const [memoryCount, setMemoryCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (anomalies.length > 0) {
-      setActiveThreats(anomalies.filter(a => a.label === 'DANGER' || a.label === 'WARNING').length);
-      setHealthScore(Math.max(40, 100 - (anomalies.length * 2)));
+    const fetchInitialData = async () => {
+      try {
+        const [clustersRes, anomaliesRes, memoryRes] = await Promise.all([
+          apiService.clusters.list(),
+          apiService.telemetry.getRecentAnomalies(),
+          apiService.memoryCells.list()
+        ]);
+        
+        if (clustersRes.data.length > 0) {
+          setHealthScore(clustersRes.data[0].immunityScore || 98);
+        }
+        
+        setActiveThreats(anomaliesRes.data.filter((a: any) => a.severity === 'critical' || a.severity === 'high').length);
+        setMemoryCount(memoryRes.data.length);
+      } catch (e) {
+        console.error("Failed to fetch dashboard data", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    if (socketAnomalies.length > 0) {
+      setActiveThreats(prev => Math.max(prev, socketAnomalies.filter(a => a.severity === 'CRITICAL' || a.severity === 'HIGH').length));
     }
-  }, [anomalies]);
+  }, [socketAnomalies]);
 
   const executeProtocol = async (type: string, label: string) => {
     setProtocolActive(label);
@@ -43,6 +69,13 @@ export const ImmuneDashboard: React.FC = () => {
 
   return (
     <div className="w-full space-y-8">
+      {/* Cinematic Scanning Line */}
+      <motion.div 
+        animate={{ top: ['0%', '100%', '0%'] }}
+        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+        className="fixed left-0 right-0 h-px bg-gradient-to-r from-transparent via-bio-green/20 to-transparent z-[5] pointer-events-none shadow-[0_0_15px_rgba(0,255,128,0.5)]"
+      />
+
       {/* Protocol Overlay */}
       <AnimatePresence>
         {protocolActive && (
@@ -70,7 +103,9 @@ export const ImmuneDashboard: React.FC = () => {
               </div>
               <span className="text-xs font-mono text-bio-green">STABLE</span>
             </div>
-            <div className="text-3xl font-bold text-white mb-1">{healthScore}%</div>
+            <div className="text-3xl font-bold text-white mb-1">
+              {loading ? <Skeleton className="h-8 w-16" /> : `${healthScore}%`}
+            </div>
             <div className="text-xs text-slate-500 uppercase tracking-widest font-bold">Immunity Level</div>
             <div className="mt-4 h-1 w-full bg-white/5 rounded-full overflow-hidden">
               <div className="h-full bg-bio-green transition-all duration-1000" style={{ width: `${healthScore}%` }} />
@@ -88,7 +123,9 @@ export const ImmuneDashboard: React.FC = () => {
                 {activeThreats > 0 ? 'THREATS DETECTED' : 'CLEAR'}
               </span>
             </div>
-            <div className="text-3xl font-bold text-white mb-1">{activeThreats}</div>
+            <div className={`text-3xl font-bold text-white mb-1 ${activeThreats > 0 ? 'glitch-text' : ''}`}>
+              {loading ? <Skeleton className="h-8 w-10" /> : activeThreats}
+            </div>
             <div className="text-xs text-slate-500 uppercase tracking-widest font-bold">Active Pathogens</div>
           </BioCard>
         </motion.div>
@@ -102,7 +139,7 @@ export const ImmuneDashboard: React.FC = () => {
               <span className="text-xs font-mono text-bio-amber">OPTIMIZING</span>
             </div>
             <div className="text-3xl font-bold text-white mb-1">
-              {lastTelemetry?.metrics?.cpu ? lastTelemetry.metrics.cpu.toFixed(1) : '42.1'}%
+              {loading ? <Skeleton className="h-8 w-20" /> : (lastTelemetry?.metrics?.cpu ? lastTelemetry.metrics.cpu.toFixed(1) + '%' : '42.1%')}
             </div>
             <div className="text-xs text-slate-500 uppercase tracking-widest font-bold">Metabolic Load</div>
           </BioCard>
@@ -116,8 +153,10 @@ export const ImmuneDashboard: React.FC = () => {
               </div>
               <span className="text-xs font-mono text-bio-cyan">SYNCED</span>
             </div>
-            <div className="text-3xl font-bold text-white mb-1">12,482</div>
-            <div className="text-xs text-slate-500 uppercase tracking-widest font-bold">Neural Memory</div>
+            <div className="text-3xl font-bold text-white mb-1">
+              {loading ? <Skeleton className="h-8 w-20" /> : memoryCount}
+            </div>
+            <div className="text-xs text-slate-500 uppercase tracking-widest font-bold">Neural Memory Cells</div>
           </BioCard>
         </motion.div>
       </div>

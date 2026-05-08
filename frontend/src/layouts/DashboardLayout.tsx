@@ -53,11 +53,36 @@ export const DashboardLayout: React.FC = () => {
   const handleDeployAntibody = async () => {
     try {
       await apiService.actions.execute('all', 'MITIGATE');
-      alert("Antibody Deployment sequence initiated. Injecting mitigation patches...");
+      alert("Neural Hotkey Triggered: Antibody Deployment sequence initiated.");
     } catch (e) {
       console.error("Deployment failed", e);
     }
   };
+
+  const handleGlobalPurge = async () => {
+    try {
+      await apiService.actions.execute('all', 'PURGE');
+      alert("Neural Hotkey Triggered: Global Purge sequence initiated. Flushing infected sectors.");
+    } catch (e) {
+      console.error("Purge failed", e);
+    }
+  };
+
+  // Neural Hotkeys
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        handleGlobalPurge();
+      }
+      if (e.ctrlKey && e.key === 'a') {
+        e.preventDefault();
+        handleDeployAntibody();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-bio-dark text-slate-300 relative overflow-hidden">

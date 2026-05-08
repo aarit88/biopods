@@ -1,23 +1,39 @@
-import { connect, NatsConnection, JSONCodec, Subscription } from 'nats';
+import { connect, NatsConnection, JSONCodec } from 'nats';
+import EventEmitter from 'events';
 
 export class MessagingService {
   private nc: NatsConnection | null = null;
   private jc = JSONCodec();
   private isMock: boolean = false;
+  private localBus = new EventEmitter();
 
   async connect(servers: string = 'nats://localhost:4222') {
     try {
       this.nc = await connect({ servers });
-      console.log(`Connected to NATS at ${servers}`);
+      console.log(`✅ Neural Bus Connected: NATS at ${servers}`);
     } catch (err) {
-      console.warn('NATS connection failed. Falling back to Mock Messaging (Console Only).');
+      console.warn('⚠️ NATS connection failed. Falling back to HTTP/Local Bridge for Demo.');
       this.isMock = true;
     }
   }
 
-  publish(subject: string, data: any) {
+  async publish(subject: string, data: any) {
     if (this.isMock) {
-      console.log(`[MOCK PUBLISH] ${subject}:`, data);
+      // Local process bridge
+      this.localBus.emit(subject, data);
+      
+      // Cross-process bridge (Post to Visualization Hub)
+      try {
+        if (subject !== 'telemetry.visual') { // Avoid infinite loops
+          fetch('http://localhost:3001/api/events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subject, data })
+          }).catch(() => {});
+        }
+      } catch (e) {
+        // Hub might not be up yet
+      }
       return;
     }
     if (!this.nc) return;
@@ -26,8 +42,8 @@ export class MessagingService {
 
   subscribe(subject: string, callback: (data: any) => void): any {
     if (this.isMock) {
-      console.log(`[MOCK SUBSCRIBE] ${subject}`);
-      return { unsubscribe: () => {} };
+      this.localBus.on(subject, callback);
+      return { unsubscribe: () => this.localBus.off(subject, callback) };
     }
     if (!this.nc) return { unsubscribe: () => {} };
     

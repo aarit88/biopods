@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BioCard } from '../components/ui/BioCard';
-import { Search, Filter, ZoomIn, ZoomOut, Maximize2, ShieldAlert, Cpu, HardDrive, Network, X } from 'lucide-react';
+import { Search, Filter, ZoomIn, ZoomOut, Maximize2, ShieldAlert, Cpu, HardDrive, Network, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiService } from '../services/api';
 
 interface ClusterNode {
   id: string;
@@ -18,14 +19,41 @@ export const TopologyMap: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<ClusterNode | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [zoom, setZoom] = useState(1);
+  const [nodes, setNodes] = useState<ClusterNode[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const nodes: ClusterNode[] = useMemo(() => [
-    { id: 'core', label: 'IMMUNE CORE', x: 500, y: 400, status: 'healthy', cpu: '12%', ram: '4.2GB', pods: 12 },
-    { id: 'alpha', label: 'NODE-ALPHA', x: 200, y: 250, status: 'healthy', cpu: '45%', ram: '8.1GB', pods: 24 },
-    { id: 'beta', label: 'NODE-BETA', x: 800, y: 250, status: 'warning', cpu: '78%', ram: '12.4GB', pods: 32 },
-    { id: 'gamma', label: 'NODE-GAMMA', x: 200, y: 550, status: 'healthy', cpu: '22%', ram: '6.2GB', pods: 18 },
-    { id: 'delta', label: 'NODE-DELTA', x: 800, y: 550, status: 'danger', cpu: '98%', ram: '15.9GB', pods: 44 },
-  ], []);
+  useEffect(() => {
+    const fetchNodes = async () => {
+      try {
+        const { data: clusters } = await apiService.clusters.list();
+        if (clusters.length > 0) {
+          // For hackathon, we'll map the database nodes to our visual coordinates
+          const dbNodes = clusters[0].nodes || [];
+          const visualNodes: ClusterNode[] = dbNodes.map((n: any, i: number) => ({
+            id: n.id,
+            label: n.nodeName,
+            x: 200 + (i % 2) * 600,
+            y: 250 + Math.floor(i / 2) * 300,
+            status: n.nodeStatus?.toLowerCase() || 'healthy',
+            cpu: n.cpuUsage + '%',
+            ram: n.memoryUsage + 'GB',
+            pods: n.pods?.length || 0
+          }));
+          
+          // Add the Immune Core manually
+          setNodes([
+            { id: 'core', label: 'IMMUNE CORE', x: 500, y: 400, status: 'healthy', cpu: '12%', ram: '4.2GB', pods: 12 },
+            ...visualNodes
+          ]);
+        }
+      } catch (e) {
+        console.error("Failed to fetch topology nodes", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchNodes();
+  }, []);
 
   const filteredNodes = nodes.filter(n => 
     n.label.toLowerCase().includes(searchTerm.toLowerCase())
@@ -36,12 +64,27 @@ export const TopologyMap: React.FC = () => {
       case 'healthy': return '#00ff80';
       case 'warning': return '#ffaa00';
       case 'danger': return '#ff3d00';
+      case 'critical': return '#ff3d00';
       default: return '#ffffff';
     }
   };
 
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col gap-6 relative overflow-hidden">
+      <AnimatePresence>
+        {loading && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-bio-dark/50 backdrop-blur-xl rounded-3xl"
+          >
+            <Loader2 className="text-bio-green animate-spin mb-4" size={48} />
+            <span className="text-[10px] font-black font-mono text-bio-green tracking-[0.3em] uppercase animate-pulse">Syncing Neural Map...</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex items-center justify-between z-20">
         <div className="flex items-center gap-4 flex-1 max-w-md">
           <div className="relative flex-1 group">
@@ -73,9 +116,22 @@ export const TopologyMap: React.FC = () => {
       </div>
 
       <div className="flex-1 relative bg-bio-darker/30 rounded-3xl border border-white/5 overflow-hidden backdrop-blur-sm shadow-2xl">
+        {/* Cinematic Neural Background */}
+        <div className="absolute inset-0 pointer-events-none opacity-20">
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.1, 1],
+              opacity: [0.1, 0.2, 0.1]
+            }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,255,128,0.1)_0%,transparent_70%)]"
+          />
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
+        </div>
+
         <motion.svg 
           viewBox="0 0 1000 800" 
-          className="w-full h-full cursor-grab active:cursor-grabbing"
+          className="w-full h-full cursor-grab active:cursor-grabbing relative z-10"
           animate={{ scale: zoom }}
           transition={{ type: 'spring', stiffness: 200, damping: 25 }}
         >
