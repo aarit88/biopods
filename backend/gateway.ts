@@ -36,11 +36,11 @@ app.post('/api/telemetry', async (req, res) => {
   res.json({ status: 'ACK', podId });
 });
 
-// Simulated Pod Fleet
+// Simulated Pod Fleet matching database names for frontend UI integration
 const FLEET = [
-  { podId: 'turbine-core-01', baseCpu: 55, baseMem: 60, baseTemp: 45 },
-  { podId: 'control-system-01', baseCpu: 30, baseMem: 40, baseTemp: 35 },
-  { podId: 'power-grid-link', baseCpu: 20, baseMem: 35, baseTemp: 30 },
+  { podId: 'telemetry-engine', baseCpu: 55, baseMem: 60, baseTemp: 45 },
+  { podId: 'bio-auth-service', baseCpu: 30, baseMem: 40, baseTemp: 35 },
+  { podId: 'threat-scanner', baseCpu: 20, baseMem: 35, baseTemp: 30 },
 ];
 
 // Periodic Patrol Routine (Simulated)
@@ -62,7 +62,9 @@ setInterval(async () => {
   const metrics = {
     cpu: pod.baseCpu + Math.random() * 50,
     memory: pod.baseMem + Math.random() * 40,
-    temp: pod.baseTemp + Math.random() * 35
+    temp: pod.baseTemp + Math.random() * 35,
+    // Network in KB/s — realistic simulated values between 50–800 KB/s
+    network: Math.round(50 + Math.random() * 750),
   };
 
   await cytokineBus.publish('telemetry.raw', { podId: pod.podId, metrics, timestamp: new Date() });

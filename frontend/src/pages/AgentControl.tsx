@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BioCard } from '../components/ui/BioCard';
-import { Microscope, Zap, Play, Square, RefreshCcw, Terminal as TerminalIcon, Shield, X, Loader2 } from 'lucide-react';
+import { Microscope, Zap, Play, Square, RefreshCcw, Terminal as TerminalIcon, Shield, Loader2 } from 'lucide-react';
 import { BioButton } from '../components/ui/BioButton';
 import { apiService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,7 +17,7 @@ interface Agent {
 export const AgentControl: React.FC = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [logs, setLogs] = useState<{ msg: string, time: string }[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [synthProgress, setSynthProgress] = useState(0);
 

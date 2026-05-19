@@ -11,6 +11,7 @@ export const LandingPage: React.FC = () => {
 
   // Login Modal States
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [redirectTarget, setRedirectTarget] = useState('/dashboard');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,7 +31,7 @@ export const LandingPage: React.FC = () => {
     try {
       const { data } = await apiService.auth.login({ email, password });
       localStorage.setItem('biopods_token', data.accessToken);
-      navigate('/dashboard');
+      navigate(redirectTarget);
     } catch (error: any) {
       setErrorMessage(error.response?.data?.error || 'Authentication rejected. Verify security key.');
     } finally {
@@ -168,14 +169,20 @@ export const LandingPage: React.FC = () => {
           className="flex flex-col sm:flex-row items-center justify-center gap-10 pt-16"
         >
           <button 
-            onClick={() => setShowLoginModal(true)}
+            onClick={() => {
+              setRedirectTarget('/dashboard');
+              setShowLoginModal(true);
+            }}
             className="group relative px-14 py-6 bg-bio-green text-bio-dark text-sm font-black tracking-[0.2em] rounded-2xl shadow-[0_20px_50px_rgba(0,255,128,0.25)] hover:scale-110 active:scale-95 transition-all uppercase italic overflow-hidden"
           >
             <div className="absolute inset-0 bg-white/30 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
             Enter Command Center
           </button>
           <button 
-            onClick={() => navigate('/healing')}
+            onClick={() => {
+              setRedirectTarget('/healing');
+              setShowLoginModal(true);
+            }}
             className="px-14 py-6 border-2 border-white/10 text-white text-sm font-black tracking-[0.2em] rounded-2xl hover:bg-white/5 hover:border-bio-green/30 active:scale-95 transition-all uppercase italic"
           >
             View Protocols

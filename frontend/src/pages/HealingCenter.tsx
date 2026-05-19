@@ -181,8 +181,17 @@ export const HealingCenter: React.FC = () => {
   useEffect(() => {
     fetchData();
     pollingRef.current = setInterval(() => fetchData(true), 8000);
+
+    const handleGlobalUpdate = () => {
+      fetchData(true);
+    };
+    window.addEventListener('bio-mitigate-all', handleGlobalUpdate);
+    window.addEventListener('bio-purge-all', handleGlobalUpdate);
+
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
+      window.removeEventListener('bio-mitigate-all', handleGlobalUpdate);
+      window.removeEventListener('bio-purge-all', handleGlobalUpdate);
     };
   }, [fetchData]);
 

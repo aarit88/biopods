@@ -63,6 +63,15 @@ def persist_analysis(pod_id: str, pod_name: str, threat_data: dict, analysis: di
         )
         print(f"[DB] DangerEvent persisted: {event_id}")
 
+        # Update the pod's status to isolated so the UI visually reacts
+        cursor.execute(
+            """UPDATE pods
+               SET pod_status = 'isolated', danger_level = 'critical', immunity_state = 'breached'
+               WHERE id = ? OR pod_name = ?""",
+            (pod_id, pod_id),
+        )
+        print(f"[DB] Pod {pod_id} status updated to isolated.")
+
         # 2. Create ImmuneResponse
         response_id = str(uuid.uuid4())
         action_taken = analysis.get("action_command", "T-Cell autonomous response")

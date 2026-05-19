@@ -6,6 +6,8 @@ import jwt from 'jsonwebtoken';
 import { natsClient } from '../../shared/messaging/index.ts';
 import { prisma } from '../../shared/db/index.ts';
 import { createDatasetRouter } from './routes/dataset.js';
+import { DependencyGraphService } from './services/dependencyGraphService.ts';
+import { ImmuneOrchestrator } from './services/immuneOrchestrator.ts';
 
 const SELF_HEAL_URL = process.env.SELF_HEAL_URL || 'http://localhost:5100';
 
@@ -229,11 +231,41 @@ app.post('/api/v1/nodes/:id/mitigate', authenticateToken, async (req, res) => {
   }
 });
 
-// Pod Routes
+// Topology Graph Route
+app.get('/api/v1/topology/graph', authenticateToken, async (req, res) => {
+  try {
+    const graph = await DependencyGraphService.buildTopology();
+    res.json(graph);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to build dependency topology graph' });
+  }
+});
+
+// Pod Routes — returns pods with parent node CPU/memory for the Active Pods Telemetry Grid
 app.get('/api/v1/pods', authenticateToken, async (req, res) => {
   try {
-    const pods = await prisma.pod.findMany();
-    res.json(pods);
+    const pods = await prisma.pod.findMany({
+      include: {
+        node: {
+          select: { cpuUsage: true, memoryUsage: true, nodeName: true }
+        }
+      }
+    });
+    // Flatten node metrics onto each pod
+    const enriched = pods.map((p: any) => ({
+      ...p,
+      cpuUsage: p.cpuUsage ?? p.node?.cpuUsage ?? 0,
+      memoryUsage: p.memoryUsage ?? p.node?.memoryUsage ?? 0,
+    }));
+    // Deduplicate by podName — keep only the highest-CPU instance per unique pod name
+    const seen = new Map<string, any>();
+    for (const pod of enriched) {
+      const key = pod.podName || pod.id;
+      if (!seen.has(key) || (pod.cpuUsage ?? 0) > (seen.get(key)?.cpuUsage ?? 0)) {
+        seen.set(key, pod);
+      }
+    }
+    res.json(Array.from(seen.values()));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch pods' });
   }
@@ -565,6 +597,10 @@ const bootstrap = async () => {
     await natsClient.connect(process.env.NATS_URL || 'nats://localhost:4222');
     await prisma.$connect();
     console.log('✅ Database and Messaging layers connected.');
+    
+    // Engaged BioPods Central Nervous System (Immune Orchestrator Loop)
+    await ImmuneOrchestrator.startOrchestration();
+    console.log('🧬 Central Immune Nervous System fully engaged.');
     
     app.listen(PORT, () => {
       console.log(`🚀 BioPods API Gateway running on port ${PORT}`);

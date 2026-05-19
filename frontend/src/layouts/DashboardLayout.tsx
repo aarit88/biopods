@@ -58,23 +58,29 @@ export const DashboardLayout: React.FC = () => {
     setShowDropdown(false);
   };
 
-  const handleDeployAntibody = async () => {
+  const handleDeployAntibody = async (isHotkey = false) => {
     try {
       await apiService.antibody.deploy();
       clearNotifications();
       window.dispatchEvent(new CustomEvent('bio-mitigate-all'));
-      alert("Neural Hotkey Triggered: Antibody Deployment sequence initiated.");
+      alert(isHotkey 
+        ? "Neural Hotkey Triggered: Antibody Deployment sequence initiated."
+        : "Antibody Deployment sequence initiated. Patches deployed to all nodes."
+      );
     } catch (e) {
       console.error("Deployment failed", e);
     }
   };
 
-  const handleGlobalPurge = async () => {
+  const handleGlobalPurge = async (isHotkey = false) => {
     try {
       await apiService.actions.execute('all', 'PURGE');
       clearNotifications();
       window.dispatchEvent(new CustomEvent('bio-purge-all'));
-      alert("Neural Hotkey Triggered: Global Purge sequence initiated. Flushing infected sectors.");
+      alert(isHotkey 
+        ? "Neural Hotkey Triggered: Global Purge sequence initiated. Flushing infected sectors."
+        : "Global Purge sequence initiated. Flushing infected sectors across all namespaces."
+      );
     } catch (e) {
       console.error("Purge failed", e);
     }
@@ -85,11 +91,11 @@ export const DashboardLayout: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'p') {
         e.preventDefault();
-        handleGlobalPurge();
+        handleGlobalPurge(true);
       }
       if (e.ctrlKey && e.key === 'a') {
         e.preventDefault();
-        handleDeployAntibody();
+        handleDeployAntibody(true);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -150,16 +156,16 @@ export const DashboardLayout: React.FC = () => {
               <Home size={20} className="group-hover:scale-110 transition-transform" />
             </button>
 
-            <div 
-              onClick={handleDeployAntibody}
-              className="hidden md:flex px-4 py-2 bg-bio-green/5 border border-bio-green/20 rounded-full text-bio-green text-[10px] font-black tracking-widest items-center gap-2 cursor-pointer hover:bg-bio-green/10 transition-all active:scale-95 shadow-[0_0_15px_rgba(0,255,128,0.1)]"
+            <button 
+              onClick={() => handleDeployAntibody(false)}
+              className="hidden md:flex px-4 py-2 bg-bio-green/5 border border-bio-green/20 rounded-full text-bio-green text-[10px] font-black tracking-widest items-center gap-2 cursor-pointer hover:bg-bio-green/10 transition-all active:scale-95 shadow-[0_0_15px_rgba(0,255,128,0.1)] focus:outline-none"
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-bio-green opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-bio-green"></span>
               </span>
               DEPLOY ANTIBODY
-            </div>
+            </button>
 
             {/* Notification Bell */}
             <div className="relative">

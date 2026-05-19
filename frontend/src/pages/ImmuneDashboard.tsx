@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { BioCard } from '../components/ui/BioCard';
 import { BioButton } from '../components/ui/BioButton';
 import {
-  ShieldCheck, ShieldAlert, Zap, Activity, Database,
+  ShieldCheck, ShieldAlert, Activity, Database,
   Crosshair, Loader2, CheckCircle2, AlertTriangle, Cpu, MemoryStick, Wifi
 } from 'lucide-react';
 import { useSocket } from '../hooks/useSocket';
@@ -221,6 +221,8 @@ export const ImmuneDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [chartPoints, setChartPoints] = useState<TelemetryPoint[]>([]);
   const [pods, setPods] = useState<any[]>([]);
+  // Stable per-pod live metrics cache: avoids Math.random() flicker on every render
+  const livePodMetrics = useRef<Record<string, { cpu: number; mem: number; net: number }>>({});
 
   // Antibody deploy state
   const [deploying, setDeploying] = useState(false);
@@ -305,35 +307,58 @@ export const ImmuneDashboard: React.FC = () => {
       fetchVitals(true);
       fetchPods();
     }, 15000);
-    return () => clearInterval(iv);
+
+    const handleGlobalUpdate = () => {
+      fetchVitals(true);
+      fetchPods();
+    };
+    window.addEventListener('bio-mitigate-all', handleGlobalUpdate);
+    window.addEventListener('bio-purge-all', handleGlobalUpdate);
+
+    return () => {
+      clearInterval(iv);
+      window.removeEventListener('bio-mitigate-all', handleGlobalUpdate);
+      window.removeEventListener('bio-purge-all', handleGlobalUpdate);
+    };
   }, [fetchVitals, fetchHistory, fetchPods]);
 
   // ── Live socket → append to chart ────────────────────────────────────────
 
   useEffect(() => {
     if (!lastTelemetry) return;
-    const { metrics } = lastTelemetry;
+    const { podId, metrics } = lastTelemetry;
     if (!metrics) return;
+    // Network is already in KB/s from gateway; no division needed
     const pt: TelemetryPoint = {
       t: Date.now(),
       cpu: metrics.cpu ?? 0,
       mem: metrics.memory ?? 0,
-      net: (metrics.network ?? 0) / 1024,
+      net: metrics.network ?? 0,
       anomaly: false,
     };
     setChartPoints(prev => [...prev.slice(-79), pt]);
+
+    // Cache per-pod live metrics for the Active Pods Grid
+    if (podId) {
+      livePodMetrics.current[podId] = {
+        cpu: metrics.cpu ?? 0,
+        mem: metrics.memory ?? 0,
+        net: metrics.network ?? 0,
+      };
+    }
   }, [lastTelemetry]);
 
   useEffect(() => {
     if (!lastTelemetry) return;
     const { podId, metrics } = lastTelemetry;
     if (!podId || !metrics) return;
+    // Update pod in state only when the socket pushes data for that specific pod
     setPods(prev => prev.map(p => {
       if (p.id === podId || p.podName === podId) {
         return {
           ...p,
-          cpuUsage: metrics.cpu,
-          memoryUsage: metrics.memory
+          cpuUsage: metrics.cpu ?? p.cpuUsage,
+          memoryUsage: metrics.memory ?? p.memoryUsage,
         };
       }
       return p;
@@ -526,8 +551,11 @@ export const ImmuneDashboard: React.FC = () => {
                     </div>
                   ) : (
                     pods.map(pod => {
-                      const cpu = pod.cpuUsage ?? 25 + Math.random() * 20;
-                      const memory = pod.memoryUsage ?? 30 + Math.random() * 15;
+                      // Use stable cached live value > DB value > fixed fallback (no random)
+                      const live = livePodMetrics.current[pod.podName] || livePodMetrics.current[pod.id];
+                      const cpu = live?.cpu ?? pod.cpuUsage ?? 0;
+                      const memory = live?.mem ?? pod.memoryUsage ?? 0;
+                      const net = live?.net ?? 0;
                       const isHealthy = pod.podStatus === 'healthy' || pod.podStatus === 'stable';
                       const isQuarantined = pod.podStatus === 'quarantined' || pod.podStatus === 'isolated';
                       
@@ -562,6 +590,16 @@ export const ImmuneDashboard: React.FC = () => {
                               </div>
                               <div className="h-1 bg-white/5 rounded-full overflow-hidden mt-1">
                                 <div className="h-full bg-bio-cyan rounded-full" style={{ width: `${Math.min(memory, 100)}%` }} />
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between text-[9px] font-mono text-slate-500">
+                                <span>Network Load</span>
+                                <span className="text-white">{net.toFixed(0)} KB/s</span>
+                              </div>
+                              <div className="h-1 bg-white/5 rounded-full overflow-hidden mt-1">
+                                <div className="h-full bg-bio-amber rounded-full" style={{ width: `${Math.min(net / 800 * 100, 100)}%` }} />
                               </div>
                             </div>
                           </div>
@@ -669,6 +707,13 @@ export const ImmuneDashboard: React.FC = () => {
                   <span className="text-bio-cyan">{chartPoints.at(-1)?.mem.toFixed(1)}%</span>
                 </div>
                 <Sparkline data={chartPoints.map(p => p.mem)} color="#00e5ff" height={28} />
+              </div>
+              <div>
+                <div className="flex justify-between text-[9px] font-mono text-slate-600 mb-0.5">
+                  <span>Network</span>
+                  <span className="text-bio-amber">{chartPoints.at(-1)?.net.toFixed(0)} KB/s</span>
+                </div>
+                <Sparkline data={chartPoints.map(p => p.net)} color="#ffd700" height={28} />
               </div>
             </div>
           )}

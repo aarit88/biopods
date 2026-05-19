@@ -165,6 +165,7 @@ func getLabelsDocumentation() (map[string][]string, error) {
 		if e != nil {
 			return fmt.Errorf("cannot read file %s: %w", p, e)
 		}
+		defer f.Close()
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
 			params := lineRe.FindStringSubmatch(scanner.Text())
@@ -184,6 +185,9 @@ func getLabelsDocumentation() (map[string][]string, error) {
 			}
 
 			documentedMetrics[metric] = labelPatterns
+		}
+		if err := scanner.Err(); err != nil {
+			return fmt.Errorf("failed to scan file %s: %w", p, err)
 		}
 		return nil
 	})
