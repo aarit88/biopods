@@ -1,0 +1,111 @@
+================================================================================
+                    🧬 BIOPODS: AUTONOMIC IMMUNE ENGINE 🧬
+================================================================================
+
+--------------------------------------------------------------------------------
+ 1. BRIEF SUMMARY OF THE TOTAL WORKING OF THE PROJECT
+--------------------------------------------------------------------------------
+BioPods is a state-of-the-art autonomic self-healing platform that mimics a biological 
+immune system to protect clusters from metabolic anomalies, malicious intrusions, 
+and system failures. 
+
+All microservices communicate in real-time, operating around a shared database core:
+
+1. Central Database Core (SQLite via Prisma):
+   - Serves as the single source of truth located at `backend/shared/db/dev.db`.
+   - Persists dynamic configurations, cluster topologies (Nodes & Pods), danger 
+     events, self-healing audit logs, learned threat memories, and global settings.
+
+2. API Gateway (TypeScript Gateway on Port 3000):
+   - Coordinates routing, authentication, persistent settings storage, history lists, 
+     and cluster antibody controls.
+
+3. Telemetry Ingest Engine (Port 5000):
+   - Tracks metrics across simulated Kubernetes pods (CPU, Memory, Temp, load).
+   - Flags anomalies as "DangerEvents" in the database if thresholds are crossed.
+
+4. Visualization Hub (Port 3001):
+   - Emits real-time WebSockets telemetry to drive the dynamic frontend diagrams.
+
+5. Self-Healing Microservice (Port 5100):
+   - Executes autonomous remediations (such as pod isolation, process restarts, or 
+     quarantine rules) and logs responses to SQLite.
+
+6. Ollama AI Agent Service (Ollama Port 11434):
+   - Utilizes local Llama3 or Phi3 LLMs to perform cognitive reasoning on anomalies.
+
+7. Python Patrol Agent (Port 8001):
+   - An autonomic T-Cell reasoning node that intercepts danger logs, calls Ollama, 
+     generates human-readable mitigation plans, and triggers healing pipelines.
+
+8. Interactive Biotech UI Dashboard (Vite on Port 5173):
+   - Displays a 3D Three.js neural node cloud, interactive success trackers, an 
+     always-on AI reasoning logs terminal, dynamic settings controls, and manual
+     mitigation toggles.
+
+--------------------------------------------------------------------------------
+ 2. COMMANDS TO RUN THE PROJECT ONE-BY-ONE
+--------------------------------------------------------------------------------
+
+Please open separate terminal windows for each step to run the services one-by-one.
+
+[STEP 1: INSTALL MONOREPO DEPENDENCIES]
+  Run this command in the project root to install backend node dependencies:
+  $ cd backend
+  $ npm install
+
+[STEP 2: PREPARE AND SEED THE DATABASE]
+  Run these commands to generate Prisma definitions, push the schema to SQLite, 
+  and seed demo nodes, pods, and initial logs:
+  $ cd backend
+  $ npm run db:push
+  $ npm run db:seed
+
+[STEP 3: RUN THE VISUALIZATION REAL-TIME HUB]
+  Launches the Socket.io WebSocket bridge on port 3001:
+  $ cd backend
+  $ npm run dev -w @biopods/visualization-hub
+
+[STEP 4: RUN THE TELEMETRY INGEST SERVICE]
+  Starts pod telemetry monitoring and danger log detection on port 5000:
+  $ cd backend
+  $ npm run dev -w @biopods/telemetry-ingest
+
+[STEP 5: RUN THE AUTONOMIC SELF-HEALING ENGINE]
+  Launches the self-healing action bridge and audit writer on port 5100:
+  $ cd backend
+  $ npm run dev -w @biopods/self-heal
+
+[STEP 6: RUN THE SYSTEM API GATEWAY]
+  Starts the central API Gateway router on port 3000:
+  $ cd backend
+  $ npm run dev -w @biopods/api-gateway
+
+[STEP 7: LAUNCH LOCAL OLLAMA SERVER]
+  Ensure your local Ollama server is active and the reasoning model is pulled:
+  $ ollama serve
+  $ ollama pull llama3
+
+[STEP 8: LAUNCH PYTHON PATROL REASONER AGENT]
+  Activates the cognitive T-Cell agent that polls anomalies and applies Ollama 
+  mitigation protocols:
+  $ cd backend
+  $ set PYTHONIOENCODING=utf-8
+  $ ..\.venv\Scripts\python services/agent-python/patrol_agent.py
+
+[STEP 9: RUN THE VITE FRONTEND DASHBOARD]
+  Launches the interactive user interface on port 5173:
+  $ cd frontend
+  $ npm install
+  $ npm run dev
+
+--------------------------------------------------------------------------------
+ 3. ACCESSING THE FULLY INTEGRATED SYSTEM
+--------------------------------------------------------------------------------
+Once all services are running, open your web browser and navigate to:
+👉 http://localhost:5173
+
+Demo Login Credentials:
+- Email: admin@biopods.io
+- Password: password
+================================================================================

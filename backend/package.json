@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev -w @biopods/api-gateway\" \"npm run dev -w @biopods/visualization-hub\" \"npm run dev -w @biopods/telemetry-ingest\" \"npm run dev -w @biopods/self-heal\" \"npm run dev -w @biopods/ollama-service\"",
+    "demo": "concurrently \"tsx gateway.ts\" \"npm run dev -w @biopods/api-gateway\" \"npm run dev -w @biopods/visualization-hub\" \"npm run dev -w @biopods/telemetry-ingest\" \"npm run dev -w @biopods/self-heal\" \"set PYTHONIOENCODING=utf-8&& ..\\.venv\\Scripts\\python services/agent-python/patrol_agent.py\"",
     "build": "npm run build -w services/*",
     "db:generate": "npm run generate -w shared/db",
     "db:push": "npm run push -w shared/db",
@@ -17,5 +18,8 @@
   "devDependencies": {
     "concurrently": "^8.2.2",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "axios": "^1.16.1"
   }
 }

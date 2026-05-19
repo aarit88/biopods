@@ -28,7 +28,7 @@ const navItems = [
   { icon: Activity, label: 'Cluster Visualization', path: '/visualization' },
   { icon: BrainCircuit, label: 'Pod Intelligence', path: '/intelligence' },
   { icon: Microscope, label: 'Agent Control', path: '/agents' },
-  { icon: ShieldAlert, label: 'Threat Detection', path: '/threats' },
+  { icon: ShieldAlert, label: 'Immune Response', path: '/threats' },
   { icon: Database, label: 'Memory Archive', path: '/memory' },
   { icon: Stethoscope, label: 'Self-Healing', path: '/healing' },
   { icon: Timeline, label: 'Event Timeline', path: '/events' },

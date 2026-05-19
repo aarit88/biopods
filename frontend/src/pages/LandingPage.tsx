@@ -1,26 +1,43 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BioCard } from '../components/ui/BioCard';
 import { apiService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { Variants } from 'framer-motion';
+import { Mail, Lock, Eye, EyeOff, Loader2, ShieldAlert, X } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
+  // Login Modal States
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
   useEffect(() => {
-    // Auto-login for Demo
-    const autoLogin = async () => {
-      try {
-        const { data } = await apiService.auth.login({ email: 'admin@biopods.io', password: 'password' });
-        localStorage.setItem('biopods_token', data.accessToken);
-        console.log("Demo Authentication Successful");
-      } catch (e) {
-        console.error("Demo Auth Failed", e);
-      }
-    };
-    autoLogin();
+    // Clear token on visit to force login
+    localStorage.removeItem('biopods_token');
   }, []);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setErrorMessage('');
+
+    try {
+      const { data } = await apiService.auth.login({ email, password });
+      localStorage.setItem('biopods_token', data.accessToken);
+      navigate('/dashboard');
+    } catch (error: any) {
+      setErrorMessage(error.response?.data?.error || 'Authentication rejected. Verify security key.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
 
   const titleLetters = "BIOPODS".split("");
 
@@ -151,7 +168,7 @@ export const LandingPage: React.FC = () => {
           className="flex flex-col sm:flex-row items-center justify-center gap-10 pt-16"
         >
           <button 
-            onClick={() => navigate('/dashboard')}
+            onClick={() => setShowLoginModal(true)}
             className="group relative px-14 py-6 bg-bio-green text-bio-dark text-sm font-black tracking-[0.2em] rounded-2xl shadow-[0_20px_50px_rgba(0,255,128,0.25)] hover:scale-110 active:scale-95 transition-all uppercase italic overflow-hidden"
           >
             <div className="absolute inset-0 bg-white/30 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
@@ -191,6 +208,123 @@ export const LandingPage: React.FC = () => {
           </p>
         </BioCard>
       </motion.div>
+
+      {/* Visually Stunning Glassmorphic Login Modal */}
+      <AnimatePresence>
+        {showLoginModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="bg-bio-darker/95 border border-white/10 rounded-3xl p-8 w-full max-w-md shadow-[0_0_50px_rgba(0,255,128,0.15)] backdrop-blur-2xl relative overflow-hidden"
+            >
+              {/* Glowing header accent */}
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-bio-green to-transparent" />
+              
+              <button 
+                onClick={() => setShowLoginModal(false)}
+                className="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="text-center mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-bio-green/10 border border-bio-green/20 flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(0,255,128,0.1)]">
+                  <Lock className="text-bio-green" size={20} />
+                </div>
+                <h3 className="text-2xl font-display font-black text-white italic tracking-tight uppercase">Command Center Authentication</h3>
+                <p className="text-[10px] font-mono text-slate-500 tracking-wider uppercase mt-1">Identity validation protocol active</p>
+              </div>
+
+              {errorMessage && (
+                <motion.div 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="mb-6 p-4 bg-bio-red/10 border border-bio-red/20 rounded-2xl text-bio-red flex items-start gap-3 text-xs animate-pulse"
+                >
+                  <ShieldAlert size={16} className="shrink-0 mt-0.5" />
+                  <span className="font-mono">{errorMessage}</span>
+                </motion.div>
+              )}
+
+              <form onSubmit={handleLoginSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block font-mono">SECURE EMAIL ADDRESS</label>
+                  <div className="relative group">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-bio-green transition-colors" size={16} />
+                    <input 
+                      type="email" 
+                      required
+                      placeholder="admin@biopods.io"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full bg-bio-dark border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-xs font-mono text-white focus:outline-none focus:border-bio-green/50 focus:bg-bio-darker transition-all placeholder:text-slate-700 shadow-inner"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block font-mono">ENCRYPTED KEYWORD</label>
+                  <div className="relative group">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-bio-green transition-colors" size={16} />
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      required
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full bg-bio-dark border border-white/5 rounded-2xl py-4 pl-12 pr-12 text-xs font-mono text-white focus:outline-none focus:border-bio-green/50 focus:bg-bio-darker transition-all placeholder:text-slate-700 shadow-inner"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-4 bg-bio-green text-bio-dark text-xs font-black tracking-widest rounded-2xl hover:scale-[1.02] active:scale-95 transition-all uppercase italic flex items-center justify-center gap-2 shadow-[0_15px_30px_rgba(0,255,128,0.2)] disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="animate-spin" size={16} />
+                        VALIDATING METABOLIC LINK...
+                      </>
+                    ) : (
+                      <>
+                        INITIALIZE DECRYPT SEQUENCE
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Seamless autofill trigger for hackathon presentation ease */}
+              <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between text-[9px] font-mono text-slate-500 uppercase">
+                <span>Demo Profile:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail('admin@biopods.io');
+                    setPassword('password');
+                  }}
+                  className="px-3 py-1.5 bg-white/5 hover:bg-bio-green/10 hover:text-bio-green border border-white/10 rounded-xl transition-all font-bold tracking-widest hover:border-bio-green/30 text-slate-400"
+                >
+                  AUTO-LOAD CREDENTIALS
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

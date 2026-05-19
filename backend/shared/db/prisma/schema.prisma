@@ -161,3 +161,58 @@ model AuditLog {
 
   @@map("audit_logs")
 }
+
+model DatasetImport {
+  id              String   @id @default(uuid())
+  sourceFile      String   @map("source_file")
+  fileSize        BigInt   @map("file_size")
+  fileHash        String   @unique @map("file_hash")
+  datasetType     String   @map("dataset_type")
+  rowsInserted    Int      @default(0) @map("rows_inserted")
+  rowsSkipped     Int      @default(0) @map("rows_skipped")
+  metadata        String   @default("{}")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("dataset_imports")
+}
+
+model HistoricalMetric {
+  id                        String    @id @default(uuid())
+  collectedAt               DateTime? @map("collected_at")
+  timeSynthetic             Boolean   @default(false) @map("time_synthetic")
+  source                    String
+  sourceFile                String    @map("source_file")
+  entityType                String?   @map("entity_type")
+  entityName                String?   @map("entity_name")
+  podName                   String?   @map("pod_name")
+  nodeName                  String?   @map("node_name")
+  cpuUsage                  Float?    @map("cpu_usage")
+  memoryUsage               Float?    @map("memory_usage")
+  memoryBytes               Float?    @map("memory_bytes")
+  networkIo                 Float?    @map("network_io")
+  networkReceiveBytesRate   Float?    @map("network_receive_bytes_rate")
+  networkTransmitBytesRate  Float?    @map("network_transmit_bytes_rate")
+  status                    String?
+  anomalyLabel              Boolean?  @map("anomaly_label")
+  labelCode                 String?   @map("label_code")
+  attackType                String?   @map("attack_type")
+  rawMetrics                String    @default("{}") @map("raw_metrics")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+
+  @@index([collectedAt])
+  @@index([source])
+  @@index([entityName])
+  @@index([attackType])
+  @@index([anomalyLabel])
+  @@map("historical_metrics")
+}
+
+model SystemSetting {
+  id        String   @id @default("settings")
+  key       String   @unique
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+

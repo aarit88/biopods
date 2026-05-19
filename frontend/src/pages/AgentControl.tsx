@@ -16,7 +16,7 @@ interface Agent {
 
 export const AgentControl: React.FC = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [logs, setLogs] = useState<{msg: string, time: string}[]>([]);
+  const [logs, setLogs] = useState<{ msg: string, time: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [synthProgress, setSynthProgress] = useState(0);
@@ -46,7 +46,7 @@ export const AgentControl: React.FC = () => {
     try {
       await apiService.agents.control(id, action);
       addLog(`Signal ACK: ${name} is now processing ${action} protocol.`);
-      setAgents(prev => prev.map(a => 
+      setAgents(prev => prev.map(a =>
         a.id === id ? { ...a, status: action === 'START' ? 'active' : action === 'STOP' ? 'standby' : 'resetting' } : a
       ));
     } catch (e) {
@@ -58,7 +58,7 @@ export const AgentControl: React.FC = () => {
     setIsSynthesizing(true);
     setSynthProgress(0);
     addLog("Initiating agent protein synthesis...");
-    
+
     const interval = setInterval(() => {
       setSynthProgress(prev => {
         if (prev >= 100) {
@@ -80,11 +80,11 @@ export const AgentControl: React.FC = () => {
       agentType: 'Defense',
       confidenceScore: 100
     };
-    
+
     setAgents(prev => [newAgent, ...prev]);
     setIsSynthesizing(false);
     addLog(`Agent ${newAgent.agentName} successfully synthesized and deployed.`);
-    
+
     confetti({
       particleCount: 100,
       spread: 70,
@@ -99,7 +99,7 @@ export const AgentControl: React.FC = () => {
       <div className="absolute inset-0 pointer-events-none opacity-[0.03] overflow-hidden -z-10">
         <div className="flex gap-4 h-full">
           {[...Array(10)].map((_, i) => (
-            <motion.div 
+            <motion.div
               key={i}
               animate={{ y: ['-100%', '100%'] }}
               transition={{ duration: Math.random() * 20 + 20, repeat: Infinity, ease: "linear", delay: i * 2 }}
@@ -115,7 +115,7 @@ export const AgentControl: React.FC = () => {
       <AnimatePresence>
         {isSynthesizing && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-bio-darker/80 backdrop-blur-md">
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -132,7 +132,7 @@ export const AgentControl: React.FC = () => {
                   <span className="text-bio-green">{synthProgress}%</span>
                 </div>
                 <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                  <motion.div 
+                  <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${synthProgress}%` }}
                     className="h-full bg-bio-green shadow-[0_0_15px_#00ff80]"
@@ -156,8 +156,8 @@ export const AgentControl: React.FC = () => {
           </h2>
           <p className="text-slate-500 font-mono text-xs tracking-widest mt-1">Manage autonomous AI immune agents</p>
         </div>
-        <BioButton 
-          variant="primary" 
+        <BioButton
+          variant="primary"
           className="flex items-center gap-2 px-6 py-4 text-[10px] font-black tracking-widest active:scale-95"
           onClick={handleSynthesize}
           disabled={isSynthesizing}
@@ -198,7 +198,7 @@ export const AgentControl: React.FC = () => {
                       <span className="text-[9px] font-black uppercase tracking-widest">{agent.status}</span>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between mb-8 px-5 py-4 bg-bio-darker rounded-2xl border border-white/5 relative overflow-hidden">
                     <div className="absolute inset-0 bg-bio-green/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div className="relative z-10">
@@ -206,7 +206,7 @@ export const AgentControl: React.FC = () => {
                       <div className="text-2xl font-display font-black text-white italic">{agent.confidenceScore}%</div>
                     </div>
                     <div className="relative z-10 w-24 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                      <motion.div 
+                      <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${agent.confidenceScore}%` }}
                         className="h-full bg-bio-green rounded-full shadow-[0_0_10px_rgba(0,255,128,0.5)]"
@@ -215,19 +215,19 @@ export const AgentControl: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
-                    <button 
+                    <button
                       onClick={() => handleControl(agent.id, agent.agentName, 'START')}
                       className="flex items-center justify-center gap-2 py-2.5 bg-white/5 rounded-xl border border-white/10 text-[9px] font-black text-slate-400 hover:text-bio-green hover:bg-bio-green/10 hover:border-bio-green/20 transition-all uppercase tracking-widest active:scale-95"
                     >
                       <Play size={14} fill="currentColor" /> START
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleControl(agent.id, agent.agentName, 'STOP')}
                       className="flex items-center justify-center gap-2 py-2.5 bg-white/5 rounded-xl border border-white/10 text-[9px] font-black text-slate-400 hover:text-bio-red hover:bg-bio-red/10 hover:border-bio-red/20 transition-all uppercase tracking-widest active:scale-95"
                     >
                       <Square size={14} fill="currentColor" /> STOP
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleControl(agent.id, agent.agentName, 'RESET')}
                       className="flex items-center justify-center gap-2 py-2.5 bg-white/5 rounded-xl border border-white/10 text-[9px] font-black text-slate-400 hover:text-bio-cyan hover:bg-bio-cyan/10 hover:border-bio-cyan/20 transition-all uppercase tracking-widest active:scale-95"
                     >
@@ -251,9 +251,9 @@ export const AgentControl: React.FC = () => {
           </div>
           <div className="flex-1 p-6 overflow-y-auto font-mono text-[11px] space-y-4 max-h-[600px] scrollbar-thin scrollbar-thumb-white/10">
             {logs.map((log, i) => (
-              <motion.div 
-                key={i} 
-                initial={{ opacity: 0, x: -10 }} 
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 className="flex gap-3 text-slate-400"
               >

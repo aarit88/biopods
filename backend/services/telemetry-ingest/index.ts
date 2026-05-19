@@ -49,6 +49,16 @@ const startIngestion = async () => {
 
           natsClient.publish('danger.score', eventData);
           natsClient.publish('danger.event', eventData);
+
+          // Forward to the autonomic T-Cell pathway for Ollama reasoning
+          natsClient.publish('system-threats', {
+            podId: pod.id,
+            podName: pod.podName,
+            type: eventData.eventType,
+            severity: metrics.cpu > 95 ? 'HIGH' : 'MEDIUM',
+            metrics,
+            timestamp: new Date()
+          });
         }
       });
     } catch (error) {

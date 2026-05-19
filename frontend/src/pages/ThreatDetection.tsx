@@ -1,30 +1,96 @@
 import React, { useState, useMemo } from 'react';
 import { BioCard } from '../components/ui/BioCard';
-import { ShieldAlert, AlertTriangle, Bug, Lock, Skull, ShieldCheck, Filter, Search } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, Bug, Skull, ShieldCheck, Filter, Search } from 'lucide-react';
 import { BioButton } from '../components/ui/BioButton';
 import { useSocket } from '../hooks/useSocket';
 import { apiService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
+
+import { ReasoningTerminal } from '../components/ReasoningTerminal';
 
 export const ThreatDetection: React.FC = () => {
   const { anomalies } = useSocket();
   const [filter, setFilter] = useState<'ALL' | 'DANGER' | 'WARNING' | 'INFO'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [isolatingId, setIsolatingId] = useState<string | null>(null);
+  const [isolatedThreats, setIsolatedThreats] = useState<Set<string>>(new Set());
+  const [expandedThreat, setExpandedThreat] = useState<string | null>(null);
 
   const filteredThreats = useMemo(() => {
-    return anomalies.filter(a => {
-      const matchesFilter = filter === 'ALL' || a.label === filter;
-      const matchesSearch = a.type.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           a.details.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesFilter && matchesSearch;
-    });
-  }, [anomalies, filter, searchTerm]);
+    return anomalies
+      .map(a => ({
+        ...a,
+        type: a.type || a.eventType || 'Unknown Threat',
+        details: a.details || 'No additional metadata available',
+        label: (() => {
+          const raw = (a.label || a.severity || 'INFO').toUpperCase();
+          if (raw === 'CRITICAL' || raw === 'HIGH') return 'DANGER';
+          if (raw === 'MEDIUM') return 'WARNING';
+          return raw;
+        })(),
+      }))
+      .filter(threat => {
+        const matchesFilter = filter === 'ALL' || threat.label === filter;
+        const matchesSearch = threat.type.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                             threat.details.toLowerCase().includes(searchTerm.toLowerCase());
+        const isNotIsolated = !isolatedThreats.has(`${threat.podId}-${threat.type}`);
+        return matchesFilter && matchesSearch && isNotIsolated;
+      });
+  }, [anomalies, filter, searchTerm, isolatedThreats]);
+
+  React.useEffect(() => {
+    const handleMitigateAll = () => {
+      setIsolatedThreats(prev => {
+        const next = new Set(prev);
+        anomalies.forEach(t => next.add(`${t.podId}-${t.type}`));
+        return next;
+      });
+    };
+    const handlePurgeAllGlobal = () => {
+      setIsolatedThreats(prev => {
+        const next = new Set(prev);
+        anomalies.filter(t => {
+          const raw = (t.label || t.severity || 'INFO').toUpperCase();
+          return raw === 'CRITICAL' || raw === 'HIGH' || raw === 'MEDIUM' || raw === 'DANGER' || raw === 'WARNING';
+        }).forEach(t => next.add(`${t.podId}-${t.type}`));
+        return next;
+      });
+    };
+    
+    window.addEventListener('bio-mitigate-all', handleMitigateAll);
+    window.addEventListener('bio-purge-all', handlePurgeAllGlobal);
+    
+    return () => {
+      window.removeEventListener('bio-mitigate-all', handleMitigateAll);
+      window.removeEventListener('bio-purge-all', handlePurgeAllGlobal);
+    };
+  }, [anomalies]);
+
+  const handleInjectThreat = async (threatType: string) => {
+    const scenarios: Record<string, { podId: string; type: string; metrics: Record<string, number> }> = {
+      thermal: { podId: 'turbine-core-01', type: 'THERMAL SURGE', metrics: { cpu: 45, memory: 60, temp: 92 } },
+      ddos: { podId: 'control-system-01', type: 'DDOS SPIKE', metrics: { cpu: 98, memory: 40, temp: 42 } },
+      sqli: { podId: 'power-grid-link', type: 'SQL INJECTION', metrics: { cpu: 40, memory: 96, temp: 38 } },
+    };
+    const scenario = scenarios[threatType] || scenarios.thermal;
+    try {
+      await axios.post('http://localhost:5000/api/telemetry', scenario);
+    } catch (e) {
+      console.error("Injection failed", e);
+    }
+  };
 
   const handlePurgeAll = async () => {
     if (confirm("Execute Global Purge: This will terminate all pods in DANGER or WARNING states. Proceed?")) {
       try {
         await apiService.actions.execute('all', 'PURGE');
+        const threatsToPurge = filteredThreats.filter(t => t.label === 'DANGER' || t.label === 'WARNING');
+        setIsolatedThreats(prev => {
+          const next = new Set(prev);
+          threatsToPurge.forEach(t => next.add(`${t.podId}-${t.type}`));
+          return next;
+        });
         alert("Global Purge sequence initiated across all namespaces.");
       } catch (e) {
         console.error("Purge failed", e);
@@ -32,15 +98,17 @@ export const ThreatDetection: React.FC = () => {
     }
   };
 
-  const handleIsolate = async (id: string) => {
+  const handleIsolate = async (threat: { podId: string; type: string; action?: string }) => {
+    const id = `${threat.podId}-${threat.type}`;
     setIsolatingId(id);
+    const actionType = (threat.action || '').toUpperCase().includes('MITIGATE') ? 'MITIGATE' : 'ISOLATE';
     try {
-      await apiService.actions.execute('all', 'MITIGATE'); // Simulated isolation
+      await apiService.actions.execute(threat.podId, actionType); 
       setTimeout(() => {
         setIsolatingId(null);
-        alert(`Target ${id} has been isolated in a secure bio-containment buffer.`);
+        setIsolatedThreats(prev => new Set(prev).add(id));
       }, 1500);
-    } catch (e) {
+    } catch {
       setIsolatingId(null);
     }
   };
@@ -70,23 +138,46 @@ export const ThreatDetection: React.FC = () => {
           </div>
           <div>
             <h2 className="text-3xl font-display font-black text-white tracking-tighter uppercase italic">
-              Threat <span className="text-bio-red">Detection</span>
+              Immune <span className="text-bio-red">Response</span>
             </h2>
-            <p className="text-slate-500 font-mono text-xs tracking-widest mt-1">Real-time anomaly monitoring and containment</p>
+            <p className="text-slate-500 font-mono text-xs tracking-widest mt-1">Autonomic threat neutralisation and containment</p>
           </div>
         </div>
-        <BioButton 
-          variant="danger" 
-          className="animate-pulse shadow-[0_0_20px_rgba(255,61,0,0.3)] px-8 py-4 font-black tracking-[0.2em] italic"
-          onClick={handlePurgeAll}
-        >
-          PURGE ALL THREATS
-        </BioButton>
+        <div className="flex flex-wrap gap-3">
+          <BioButton 
+            variant="ghost" 
+            className="border-bio-amber/30 text-bio-amber text-[10px]"
+            onClick={() => handleInjectThreat('thermal')}
+          >
+            INJECT THERMAL SURGE
+          </BioButton>
+          <BioButton 
+            variant="ghost" 
+            className="border-bio-red/30 text-bio-red text-[10px]"
+            onClick={() => handleInjectThreat('ddos')}
+          >
+            INJECT DDOS SPIKE
+          </BioButton>
+          <BioButton 
+            variant="ghost" 
+            className="border-bio-cyan/30 text-bio-cyan text-[10px]"
+            onClick={() => handleInjectThreat('sqli')}
+          >
+            SQL INJECTION CAMPAIGN
+          </BioButton>
+          <BioButton 
+            variant="danger" 
+            className="animate-pulse shadow-[0_0_20px_rgba(255,61,0,0.3)] px-8 py-4 font-black tracking-[0.2em] italic"
+            onClick={handlePurgeAll}
+          >
+            PURGE ALL
+          </BioButton>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Filters Sidebar */}
-        <div className="space-y-6">
+        {/* Left Column: Filters & Terminal */}
+        <div className="space-y-6 flex flex-col h-full">
           <BioCard className="p-6 space-y-6 bg-bio-dark/30 border-white/5">
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <Filter size={14} /> Refine Neural Feed
@@ -105,7 +196,7 @@ export const ThreatDetection: React.FC = () => {
                 >
                   {f} 
                   <span className="bg-white/10 px-2 py-0.5 rounded-full text-[9px]">
-                    {f === 'ALL' ? anomalies.length : anomalies.filter(a => a.label === f).length}
+                    {f === 'ALL' ? anomalies.length : anomalies.filter(a => (a.label || a.severity || 'INFO').toUpperCase().replace('CRITICAL', 'DANGER').replace('HIGH', 'DANGER') === f).length}
                   </span>
                 </button>
               ))}
@@ -130,9 +221,13 @@ export const ThreatDetection: React.FC = () => {
               <ShieldCheck size={14} /> Protocol Active
             </h4>
             <p className="text-slate-400 text-[10px] leading-relaxed font-mono">
-              Auto-containment is ENABLED. Pathogens exceeding 80% threat probability will be auto-purged.
+              Autonomic T-Cell response is ENABLED. High-severity threats are automatically mitigated via Ollama LLM reasoning.
             </p>
           </BioCard>
+
+          <div className="flex-1 min-h-[400px]">
+            <ReasoningTerminal />
+          </div>
         </div>
 
         {/* Threat Table */}
@@ -149,20 +244,24 @@ export const ThreatDetection: React.FC = () => {
                   <th className="px-6 py-5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] text-right">Containment</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
-                <AnimatePresence mode="popLayout">
+              <AnimatePresence mode="popLayout">
                   {filteredThreats.map((threat, i) => {
                     const Icon = getSeverityIcon(threat.label);
+                    const uniqueId = `${threat.podId}-${threat.type}-${i}`;
+                    const isIsolating = isolatingId === `${threat.podId}-${threat.type}`;
+                    const isExpanded = expandedThreat === uniqueId;
+                    
                     return (
-                      <motion.tr 
-                        key={`${threat.type}-${i}`}
+                      <motion.tbody 
+                        key={uniqueId}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 20 }}
                         transition={{ delay: i * 0.05 }}
-                        className="hover:bg-bio-green/5 transition-colors group"
+                        className="group"
                       >
-                        <td className="px-6 py-4 font-mono text-[10px] text-slate-500">#{Math.random().toString(36).substring(7).toUpperCase()}</td>
+                        <tr className="hover:bg-bio-green/5 transition-colors border-b border-white/5">
+                        <td className="px-6 py-4 font-mono text-[10px] text-slate-500">#{threat.dbEventId ? threat.dbEventId.substring(0, 8).toUpperCase() : btoa(uniqueId).substring(0, 8).toUpperCase()}</td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg bg-current/10 ${getSeverityColor(threat.label)}`}>
@@ -187,32 +286,62 @@ export const ThreatDetection: React.FC = () => {
                           {new Date().toLocaleTimeString()}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center justify-end gap-2 opacity-80 hover:opacity-100 transition-opacity">
                             <button 
-                              onClick={() => handleIsolate(threat.type)}
-                              disabled={isolatingId === threat.type}
+                              onClick={() => handleIsolate(threat)}
+                              disabled={isIsolating}
                               className="px-4 py-1.5 bg-bio-red/10 border border-bio-red/20 rounded-lg text-[9px] font-black text-bio-red hover:bg-bio-red transition-all hover:text-white uppercase tracking-widest disabled:opacity-50"
                             >
-                              {isolatingId === threat.type ? 'ISOLATING...' : 'ISOLATE'}
+                              {isIsolating ? 'ISOLATING...' : 'ISOLATE'}
                             </button>
-                            <button className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black text-slate-400 hover:text-white transition-all uppercase tracking-widest">
+                            <button 
+                              onClick={() => setExpandedThreat(isExpanded ? null : uniqueId)}
+                              className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black text-slate-400 hover:text-white transition-all uppercase tracking-widest"
+                            >
                               DETAILS
                             </button>
                           </div>
                         </td>
-                      </motion.tr>
+                      </tr>
+                      {isExpanded ? (
+                        <tr className="bg-white/5 border-b border-white/10">
+                          <td colSpan={6} className="px-6 py-4 text-xs font-mono text-slate-300">
+                            <div className="p-4 bg-bio-dark/50 rounded-lg border border-white/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                              <div>
+                                <h4 className="text-bio-cyan font-bold uppercase mb-2">Threat Metadata:</h4>
+                                <p className="mb-2"><strong>Pod Target:</strong> {threat.podId || 'Unknown'}</p>
+                                <p className="mb-2"><strong>Details:</strong> {threat.details || 'No additional metadata available.'}</p>
+                                {threat.action && <p className="text-bio-amber"><strong>Recommended Action:</strong> {threat.action}</p>}
+                              </div>
+                              
+                              <div className="flex-shrink-0">
+                                <BioButton 
+                                  variant="danger"
+                                  onClick={() => handleIsolate(threat)}
+                                  disabled={isIsolating}
+                                  className="gap-2 text-[10px] font-mono shadow-[0_0_15px_rgba(255,61,0,0.3)] animate-pulse"
+                                >
+                                  <ShieldAlert size={14} /> EXECUTE MITIGATION
+                                </BioButton>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : null}
+                      </motion.tbody>
                     );
                   })}
                 </AnimatePresence>
                 {filteredThreats.length === 0 && (
+                  <tbody>
                   <tr>
                     <td colSpan={6} className="px-6 py-20 text-center text-slate-500 font-mono text-xs uppercase tracking-widest">
                       <ShieldCheck className="mx-auto mb-4 text-bio-green opacity-20" size={48} />
                       No threats detected in the current neural slice.
                     </td>
                   </tr>
+                  </tbody>
                 )}
-              </tbody>
             </table>
           </div>
         </BioCard>

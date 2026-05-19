@@ -1,63 +1,116 @@
-# 🧬 BioPods: Autonomous Cluster Immunity System
+# 🧬 BioPods: Autonomic Micro-Systems Orchestration
 
-Follow these instructions to initialize the BioPods neural core and launch the command center.
+## ABB Accelerator Hackathon Demo
+
+Follow these instructions to launch the full Bio Pods autonomic immune system demonstration.
 
 ## 📋 Prerequisites
 - **Node.js**: v18.0 or higher
-- **npm**: v9.0 or higher
+- **Python**: v3.10 or higher (with virtual environment at `.venv/`)
+- **Ollama**: Running locally at `http://localhost:11434` with `llama3` model pulled
 
 ---
 
-## 🚀 Quick Start Guide
+## 🚀 Quick Start (Single Command)
 
-### 1. Initialize the Neural Backend
-The backend manages the NATS signaling and cluster telemetry simulation.
-
+### 1. Install Backend Dependencies
 ```bash
-# Navigate to the backend directory
 cd backend
-
-# Install neural dependencies
 npm install
-
-# Start the API Gateway & Signal Core
-npm run dev
 ```
-*The backend will be live at `http://localhost:3001`*
 
-### 2. Launch the Command Center (Frontend)
-The frontend provides the 3D visualization and autonomous control interface.
-
+### 2. Install Python Agent Dependencies
 ```bash
-# Navigate to the frontend directory
-cd frontend
+cd ..
+.venv\Scripts\pip install -r backend\requirements.txt
+```
 
-# Install UI dependencies
+### 3. Initialize the Database
+```bash
+cd backend
+npm run db:push
+npm run db:seed
+```
+
+### 4. Install Frontend Dependencies
+```bash
+cd ..\frontend
 npm install
+```
 
-# Launch the development server
+### 5. Launch the Full Autonomic Demo
+Open **two terminals**:
+
+**Terminal 1 — Backend + Python Agent:**
+```bash
+cd backend
+npm run demo
+```
+This starts concurrently:
+- **TypeScript Gateway** (port 5000) — Patrol Routine & Cytokine Bus
+- **Visualization Hub** (port 3001) — Socket.io Real-Time Events
+- **Python Patrol Agent** (port 8001) — Ollama T-Cell Reasoner
+
+**Terminal 2 — Frontend:**
+```bash
+cd frontend
 npm run dev
 ```
-*The dashboard will be available at `http://localhost:5175`*
 
 ---
 
 ## 🌐 Accessing the Platform
-Once both services are running, open your browser and navigate to:
-**[http://localhost:5175](http://localhost:5175)**
+Once all services are running, open your browser and navigate to:
+**[http://localhost:5173](http://localhost:5173)**
 
 ### 🔑 Demo Credentials
-The platform is pre-configured with a "Bio-Sync" auto-login for demonstration purposes. 
-If prompted, use:
 - **Email**: `admin@biopods.io`
 - **Password**: `password`
 
 ---
 
-## 🛠️ Troubleshooting
-- **Port Conflicts**: Ensure ports `3001` (Backend) and `5175` (Frontend) are available.
-- **Neural Link**: If "LIVE TELEMETRY" shows as disconnected, ensure the backend is running before refreshing the frontend.
-- **Vite Cache**: If the UI looks inconsistent, try `npm run dev -- --force`.
+## 🏗️ System Architecture
+
+```
+                   ┌─────────────────────────────┐
+                   │  Frontend Dashboard (:5173) │
+                   └──────────────┬──────────────┘
+                                  │ (REST / WebSockets)
+                                  ▼
+                   ┌─────────────────────────────┐
+                   │  TypeScript Gateway (:5000) │
+                   └──────────────┬──────────────┘
+                                  │
+                  ┌───────────────┴───────────────┐
+                  ▼                               ▼
+     ┌────────────────────────┐       ┌────────────────────────┐
+     │  Cytokine Bus (HTTP)   │       │   Ollama Local LLMs    │
+     │  via Visualization Hub │       │ (Llama3 / Phi3)        │
+     └────────────┬───────────┘       └───────────▲────────────┘
+                  │                               │
+                  └───────────────┬───────────────┘
+                                  ▼
+                   ┌─────────────────────────────┐
+                   │  Python Patrol Agent (:8001)│
+                   │  T-Cell Ollama Reasoner     │
+                   └─────────────────────────────┘
+```
+
+## 🎯 Demo Walkthrough
+1. Navigate to **Immune Response** (Threats page)
+2. Click **"INJECT THERMAL SURGE"** or **"INJECT DDOS SPIKE"**
+3. Watch the **Cytokine Bus** detect the anomaly in the Gateway logs
+4. Observe the **Python T-Cell Agent** invoke Ollama for reasoning
+5. See the **AI Reasoning Terminal** display the live mitigation plan
+6. The threat appears in the **Immune Response Table** with severity label
 
 ---
-*Powered by BioPods Autonomous Immunity Engine v4.2*
+
+## 🛠️ Troubleshooting
+- **Port Conflicts**: Ensure ports `3001`, `5000`, `5173`, `8001` are available
+- **Ollama Not Running**: The T-Cell agent falls back to deterministic mitigation if Ollama is offline
+- **Python Encoding**: If you see `UnicodeEncodeError`, set `PYTHONIOENCODING=utf-8` before running
+- **Neural Link Offline**: Ensure the backend demo is running before refreshing the frontend
+
+---
+*Powered by BioPods Autonomic Immunity Engine — ABB Accelerator 2026*

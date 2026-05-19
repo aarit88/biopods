@@ -56,14 +56,32 @@ const handleEvent = (subject: string, data: any) => {
   if (subject === 'telemetry.raw') {
     io.to(`cluster:${data.clusterId || 'global'}`).emit('telemetry:stream', data);
     io.emit('cluster:health:update', { clusterId: data.clusterId, health: Math.random() * 100 });
+    
+    // Forward to Dendritic Agent (Python)
+    fetch('http://localhost:8001/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, data })
+    }).catch(() => {});
   } else if (subject === 'danger.score') {
     if (redis instanceof Map) redis.set(`danger:active:${data.podId}`, JSON.stringify(data));
     else redis.set(`danger:active:${data.podId}`, JSON.stringify(data), 'EX', 3600).catch(() => {});
     io.emit('pod:danger:update', data);
   } else if (subject === 'action.execute') {
     io.emit('immune:response:started', data);
+  } else if (subject === 'system-threats') {
+    // Forward to Python Patrol Agent
+    fetch('http://localhost:8001/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, data })
+    }).catch(() => {});
+  } else if (subject === 'ai.reasoning') {
+    io.emit('ai:reasoning', data);
   } else if (subject === 'threat.verified') {
     io.emit('threat:detected', data);
+  } else if (subject === 'metrics.update') {
+    io.emit('metrics:update', data);
   }
 };
 
@@ -88,6 +106,9 @@ const startNeuralForwarding = async () => {
   natsClient.subscribe('danger.score', (data) => handleEvent('danger.score', data));
   natsClient.subscribe('action.execute', (data) => handleEvent('action.execute', data));
   natsClient.subscribe('threat.verified', (data) => handleEvent('threat.verified', data));
+  natsClient.subscribe('system-threats', (data) => handleEvent('system-threats', data));
+  natsClient.subscribe('ai.reasoning', (data) => handleEvent('ai.reasoning', data));
+  natsClient.subscribe('metrics.update', (data) => handleEvent('metrics.update', data));
 };
 
 httpServer.listen(PORT, () => {

@@ -9,10 +9,11 @@ interface ClusterNode {
   label: string;
   x: number;
   y: number;
-  status: 'healthy' | 'warning' | 'danger';
+  status: 'healthy' | 'warning' | 'danger' | 'rebooting';
   cpu: string;
   ram: string;
   pods: number;
+  infectedPods?: Array<{ name: string; namespace: string; threatType: string; severity: string; status: string }>;
 }
 
 export const TopologyMap: React.FC = () => {
@@ -21,39 +22,179 @@ export const TopologyMap: React.FC = () => {
   const [zoom, setZoom] = useState(1);
   const [nodes, setNodes] = useState<ClusterNode[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const reloadTopology = async () => {
+    try {
+      const { data: clusters } = await apiService.clusters.list();
+      if (clusters.length > 0) {
+        const dbNodes = clusters[0].nodes || [];
+        
+        // Combine infra nodes with database nodes
+        const combined = [
+          { 
+            id: 'turbine', 
+            label: 'TURBINE CORE 01', 
+            status: 'healthy', 
+            cpu: '45.2%', 
+            ram: '7.2GB', 
+            pods: 8,
+            infectedPods: []
+          },
+          { 
+            id: 'control', 
+            label: 'CONTROL SYSTEM', 
+            status: 'healthy', 
+            cpu: '22.1%', 
+            ram: '3.5GB', 
+            pods: 4,
+            infectedPods: []
+          },
+          { 
+            id: 'grid', 
+            label: 'POWER GRID LINK', 
+            status: 'healthy', 
+            cpu: '15.8%', 
+            ram: '2.1GB', 
+            pods: 2,
+            infectedPods: []
+          },
+          ...dbNodes.map((n: any) => {
+            const infected = (n.pods || []).filter((p: any) => p.podStatus === 'critical' || p.dangerLevel === 'high' || p.immunityState === 'infected');
+            const infectedPodsList = infected.flatMap((p: any) => {
+              const activeEvents = (p.dangerEvents || []).filter((e: any) => e.status !== 'resolved');
+              if (activeEvents.length === 0) {
+                return [{
+                  name: p.podName || 'unknown-pod',
+                  namespace: p.namespace || 'default',
+                  threatType: 'Incipient Pathogen Leak',
+                  severity: p.dangerLevel || 'medium',
+                  status: p.podStatus || 'warning'
+                }];
+              }
+              return activeEvents.map((e: any) => ({
+                name: p.podName || 'unknown-pod',
+                namespace: p.namespace || 'default',
+                threatType: e.eventType || 'Pathogen Vector',
+                severity: e.severity || 'high',
+                status: e.status || 'active'
+              }));
+            });
+
+            return {
+              id: n.id,
+              label: n.nodeName?.toUpperCase() || 'UNKNOWN NODE',
+              status: n.nodeStatus?.toLowerCase() || 'healthy',
+              cpu: (n.cpuUsage || 0).toFixed(1) + '%',
+              ram: ((n.memoryUsage || 0) * 0.16).toFixed(1) + 'GB',
+              pods: n.pods?.length || 0,
+              infectedPods: infectedPodsList
+            };
+          })
+        ];
+
+        // Position nodes symmetrically around the central CORE
+        const radius = 280;
+        const mappedNodes: ClusterNode[] = [
+          { 
+            id: 'core', 
+            label: 'IMMUNE CORE', 
+            x: 500, 
+            y: 400, 
+            status: 'healthy', 
+            cpu: '12.4%', 
+            ram: '4.2GB', 
+            pods: 12,
+            infectedPods: []
+          },
+          ...combined.map((node, i) => {
+            const angle = (i * 2 * Math.PI) / combined.length - Math.PI / 2;
+            return {
+              ...node,
+              x: 500 + Math.cos(angle) * radius,
+              y: 400 + Math.sin(angle) * radius
+            } as ClusterNode;
+          })
+        ];
+
+        setNodes(mappedNodes);
+        
+        // Update selected node details in real-time
+        if (selectedNode) {
+          const freshSelected = mappedNodes.find(n => n.id === selectedNode.id);
+          if (freshSelected) {
+            setSelectedNode(freshSelected);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to reload topology nodes", e);
+    }
+  };
 
   useEffect(() => {
-    const fetchNodes = async () => {
-      try {
-        const { data: clusters } = await apiService.clusters.list();
-        if (clusters.length > 0) {
-          // For hackathon, we'll map the database nodes to our visual coordinates
-          const dbNodes = clusters[0].nodes || [];
-          const visualNodes: ClusterNode[] = dbNodes.map((n: any, i: number) => ({
-            id: n.id,
-            label: n.nodeName,
-            x: 200 + (i % 2) * 600,
-            y: 250 + Math.floor(i / 2) * 300,
-            status: n.nodeStatus?.toLowerCase() || 'healthy',
-            cpu: n.cpuUsage + '%',
-            ram: n.memoryUsage + 'GB',
-            pods: n.pods?.length || 0
-          }));
-          
-          // Add the Immune Core manually
-          setNodes([
-            { id: 'core', label: 'IMMUNE CORE', x: 500, y: 400, status: 'healthy', cpu: '12%', ram: '4.2GB', pods: 12 },
-            ...visualNodes
-          ]);
-        }
-      } catch (e) {
-        console.error("Failed to fetch topology nodes", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchNodes();
+    setLoading(true);
+    reloadTopology().finally(() => setLoading(false));
   }, []);
+
+  const handleDeployAntibodies = async (node: ClusterNode) => {
+    if (node.id === 'core' || node.id === 'turbine' || node.id === 'control' || node.id === 'grid') {
+      setActionLoading(true);
+      setTimeout(() => {
+        setActionLoading(false);
+        setNodes(prev => prev.map(n => n.id === node.id ? { ...n, status: 'healthy', infectedPods: [] } : n));
+        setSelectedNode(prev => prev ? { ...prev, status: 'healthy', infectedPods: [] } : null);
+        alert(`Antibody deployment sequence completed successfully. Sector ${node.label} secured.`);
+      }, 1500);
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await apiService.nodes.mitigate(node.id);
+      await reloadTopology();
+      alert(`Antibodies successfully deployed to dynamic sector ${node.label}. Database updated and pathogen infection vectors purged!`);
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to deploy antibodies for node ${node.label}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleNeuralReboot = async (node: ClusterNode) => {
+    if (node.id === 'core' || node.id === 'turbine' || node.id === 'control' || node.id === 'grid') {
+      setActionLoading(true);
+      setNodes(prev => prev.map(n => n.id === node.id ? { ...n, status: 'warning', cpu: '0%', ram: '1.0GB' } : n));
+      setSelectedNode(prev => prev ? { ...prev, status: 'warning', cpu: '0%', ram: '1.0GB' } : null);
+      setTimeout(() => {
+        setActionLoading(false);
+        setNodes(prev => prev.map(n => n.id === node.id ? { ...n, status: 'healthy', cpu: '15%', ram: '4.0GB' } : n));
+        setSelectedNode(prev => prev ? { ...prev, status: 'healthy', cpu: '15%', ram: '4.0GB' } : null);
+        alert(`Neural reboot cycle complete for ${node.label}. Sector returned to optimal state.`);
+      }, 3000);
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await apiService.nodes.reboot(node.id);
+      
+      setNodes(prev => prev.map(n => n.id === node.id ? { ...n, status: 'warning', cpu: '0%', ram: '1.0GB' } : n));
+      setSelectedNode(prev => prev ? { ...prev, status: 'warning', cpu: '0%', ram: '1.0GB' } : null);
+
+      setTimeout(async () => {
+        await reloadTopology();
+      }, 3000);
+
+      alert(`Neural reboot cycle successfully initiated for dynamic sector ${node.label} in the database. Node is power cycling.`);
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to reboot node ${node.label}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const filteredNodes = nodes.filter(n => 
     n.label.toLowerCase().includes(searchTerm.toLowerCase())
@@ -65,6 +206,7 @@ export const TopologyMap: React.FC = () => {
       case 'warning': return '#ffaa00';
       case 'danger': return '#ff3d00';
       case 'critical': return '#ff3d00';
+      case 'rebooting': return '#ffaa00';
       default: return '#ffffff';
     }
   };
@@ -72,7 +214,7 @@ export const TopologyMap: React.FC = () => {
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col gap-6 relative overflow-hidden">
       <AnimatePresence>
-        {loading && (
+        {(loading || actionLoading) && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -231,7 +373,7 @@ export const TopologyMap: React.FC = () => {
               initial={{ x: 400 }}
               animate={{ x: 0 }}
               exit={{ x: 400 }}
-              className="absolute top-0 right-0 h-full w-80 bg-bio-dark/95 backdrop-blur-2xl border-l border-white/10 z-30 p-8 shadow-2xl shadow-black"
+              className="absolute top-0 right-0 h-full w-80 bg-bio-dark/95 backdrop-blur-2xl border-l border-white/10 z-30 p-8 shadow-2xl shadow-black overflow-y-auto scrollbar-none"
             >
               <button 
                 onClick={() => setSelectedNode(null)}
@@ -254,9 +396,36 @@ export const TopologyMap: React.FC = () => {
                 <div className={`p-4 rounded-2xl border flex items-center gap-3`} style={{ backgroundColor: `${getStatusColor(selectedNode.status)}10`, borderColor: `${getStatusColor(selectedNode.status)}30` }}>
                   <ShieldAlert size={18} style={{ color: getStatusColor(selectedNode.status) }} />
                   <span className="text-xs font-black uppercase tracking-widest" style={{ color: getStatusColor(selectedNode.status) }}>
-                    {selectedNode.status === 'danger' ? 'Critical Infection' : selectedNode.status === 'warning' ? 'Metabolic Stress' : 'Neural Stability'}
+                    {selectedNode.status === 'danger' ? 'Critical Infection' : selectedNode.status === 'warning' ? 'Metabolic Stress' : selectedNode.status === 'rebooting' ? 'System Rebooting' : 'Neural Stability'}
                   </span>
                 </div>
+
+                {/* Dynamic Database active threats list */}
+                {selectedNode.infectedPods && selectedNode.infectedPods.length > 0 && (
+                  <div className="space-y-4 p-5 rounded-2xl bg-bio-red/10 border border-bio-red/20 shadow-inner">
+                    <div className="flex items-center gap-2 text-bio-red">
+                      <ShieldAlert size={16} className="animate-pulse" />
+                      <h4 className="text-[10px] font-black uppercase tracking-widest">Active Threat Detected</h4>
+                    </div>
+                    {selectedNode.infectedPods.map((threat, idx) => (
+                      <div key={idx} className="space-y-3 font-mono text-[10px] border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
+                        <div>
+                          <span className="text-slate-500 uppercase font-black block">Infected Target</span>
+                          <span className="text-white font-bold text-xs uppercase">{threat.name}</span>
+                          <span className="text-slate-400 text-[8px] block lowercase">Namespace: {threat.namespace}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 uppercase font-black block">Signature</span>
+                          <span className="text-bio-red font-black uppercase italic">{threat.threatType}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 uppercase font-black block">Action Guideline</span>
+                          <span className="text-bio-green font-bold uppercase">👉 Click "DEPLOY ANTIBODIES" below to trigger autonomous remediation</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <BioCard className="p-4 bg-white/5 border-white/5">
@@ -288,13 +457,13 @@ export const TopologyMap: React.FC = () => {
 
                 <div className="pt-8 space-y-3">
                   <button 
-                    onClick={() => alert(`Antibody deployment sequence initiated for ${selectedNode.label}. Cluster sector secured.`)}
+                    onClick={() => handleDeployAntibodies(selectedNode)}
                     className="w-full py-4 bg-bio-green/10 border border-bio-green/20 rounded-2xl text-[10px] font-black text-bio-green hover:bg-bio-green/20 transition-all uppercase tracking-widest italic active:scale-95"
                   >
                     DEPLOY ANTIBODIES
                   </button>
                   <button 
-                    onClick={() => alert(`Neural reboot command transmitted to ${selectedNode.label}. Node is cycling...`)}
+                    onClick={() => handleNeuralReboot(selectedNode)}
                     className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-slate-400 hover:text-white transition-all uppercase tracking-widest italic active:scale-95"
                   >
                     NEURAL REBOOT
@@ -314,7 +483,7 @@ export const TopologyMap: React.FC = () => {
                 <h4 className="text-bio-red text-xs font-black uppercase tracking-widest">Infection Vector</h4>
               </div>
               <p className="text-slate-400 text-[10px] leading-relaxed font-mono uppercase">
-                Neural breach detected in <span className="text-white font-bold">NODE-DELTA</span>. Pathogen propagation at 88%. Deploying mitigation.
+                Neural breach detected in <span className="text-white font-bold">NODE-BETA-02</span>. Pathogen propagation at 88%. Deploying mitigation.
               </p>
             </BioCard>
           </div>

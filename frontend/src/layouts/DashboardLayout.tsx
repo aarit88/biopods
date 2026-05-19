@@ -23,7 +23,15 @@ export const DashboardLayout: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Sync anomalies to notifications
+  // Route Guard: Redirect to landing page if not authenticated
+  useEffect(() => {
+    const token = localStorage.getItem('biopods_token');
+    if (!token) {
+      navigate('/');
+    }
+  }, [navigate]);
+
+
   useEffect(() => {
     if (anomalies.length > 0) {
       const latest = anomalies[0];
@@ -52,7 +60,9 @@ export const DashboardLayout: React.FC = () => {
 
   const handleDeployAntibody = async () => {
     try {
-      await apiService.actions.execute('all', 'MITIGATE');
+      await apiService.antibody.deploy();
+      clearNotifications();
+      window.dispatchEvent(new CustomEvent('bio-mitigate-all'));
       alert("Neural Hotkey Triggered: Antibody Deployment sequence initiated.");
     } catch (e) {
       console.error("Deployment failed", e);
@@ -62,6 +72,8 @@ export const DashboardLayout: React.FC = () => {
   const handleGlobalPurge = async () => {
     try {
       await apiService.actions.execute('all', 'PURGE');
+      clearNotifications();
+      window.dispatchEvent(new CustomEvent('bio-purge-all'));
       alert("Neural Hotkey Triggered: Global Purge sequence initiated. Flushing infected sectors.");
     } catch (e) {
       console.error("Purge failed", e);

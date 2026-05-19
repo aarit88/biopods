@@ -59,15 +59,35 @@ async def analyze_and_publish(data):
             "podId": pod_id,
             "score": danger_score,
             "label": label,
+            "type": "Dendritic Signal Fusion",
+            "details": f"Metabolic anomaly detected: {', '.join(signals)}",
             "triggeringSignals": signals,
             "timestamp": data.get("timestamp")
         }
         
         if getattr(app.state, "mock_mode", False):
             print(f"[MOCK DANGER] {pod_id}: Score {danger_score} ({label})")
+            # HTTP Bridge for Demo
+            try:
+                import urllib.request
+                url = "http://localhost:3001/api/events"
+                payload = json.dumps({"subject": "danger.score", "data": danger_event}).encode('utf-8')
+                req = urllib.request.Request(url, data=payload, headers={'Content-Type': 'application/json'})
+                # Use a separate thread or just fire and forget for demo
+                urllib.request.urlopen(req, timeout=1)
+            except Exception as e:
+                print(f"HTTP Bridge failed: {e}")
         else:
             await nc.publish("danger.score", json.dumps(danger_event).encode())
             print(f"Danger detected in {pod_id}: Score {danger_score}")
+
+@app.post("/events")
+async def handle_remote_event(event: dict):
+    subject = event.get("subject")
+    data = event.get("data")
+    if subject == "telemetry.raw":
+        await analyze_and_publish(data)
+    return {"status": "ok"}
 
 @app.get("/health")
 async def health():
