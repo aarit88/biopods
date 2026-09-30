@@ -1,22 +1,16 @@
-# 🧬 BioPods — Agentic AI Self-Healing Kubernetes Platform
+# BioPods Architectural Specification
 
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.26--v1.32+-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io)
-[![Node](https://img.shields.io/badge/Node.js-v22+-339933?logo=node.js&logoColor=white)](https://nodejs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-v5.7+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![React](https://img.shields.io/badge/React-v19+-61DAFB?logo=react&logoColor=black)](https://react.dev)
-[![Tailwind](https://img.shields.io/badge/Tailwind_CSS-v4+-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+## 1. System Overview
 
-**BioPods** is an enterprise-ready, biologically-inspired **Agentic AI Self-Healing Kubernetes Orchestration Platform**. Modeled on the human immune system, BioPods continuously discovers, monitors, diagnoses, and autonomously mitigates infrastructure anomalies across Kubernetes clusters under strict safety and governance policies.
-
----
-
-## 🌟 Architecture & The Autonomic Immune Loop
-
-BioPods executes an 8-stage closed autonomic loop:
+BioPods is an **Agentic AI Self-Healing Kubernetes Orchestration Platform** modeled on the human biological immune system. It continuously executes an 8-stage autonomic loop:
 
 ```
 OBSERVE ──▶ DETECT ──▶ DIAGNOSE ──▶ REASON ──▶ PLAN ──▶ SAFETY CHECK ──▶ EXECUTE ──▶ VERIFY ──▶ LEARN
 ```
+
+---
+
+## 2. Layered Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -55,100 +49,9 @@ OBSERVE ──▶ DETECT ──▶ DIAGNOSE ──▶ REASON ──▶ PLAN ─�
 
 ---
 
-## 🤖 The 8 Specialized Agents
+## 3. Core Principles
 
-| Agent | Biological Counterpart | Primary Responsibility |
-| :--- | :--- | :--- |
-| **Dendritic Detector** | Dendritic Cell | Correlates signals, restart spikes, and K8s warning events; flags incidents. |
-| **T-Cell Diagnostician** | Cytotoxic T-Cell | Investigates pod logs, exit codes, and K8s events to isolate root causes. |
-| **B-Cell Memory** | Memory B-Cell | Vector memory retrieval (cosine similarity) matching past incidents to remedies. |
-| **Planning Agent** | Helper T-Cell | Formulates schema-validated remediation plans (`ActionPlan`) and rollback steps. |
-| **Policy Safety Guard** | Immune Tolerance Gate | Enforces safety policies: protected namespaces, replica limits, cooldowns, approvals. |
-| **Healing Executor** | Phagocyte / Macrophage | Dispatches authorized operations through the Kubernetes API. |
-| **Verification Agent** | Regulatory T-Cell | Polls post-remediation readiness, restart delta, and metrics to confirm true recovery. |
-| **Learning Agent** | Somatic Hypermutation | Reinforces successful memory cells (+3 affinity) and penalizes failed strategies. |
-
----
-
-## 🚀 Quick Start (Local Development)
-
-### 1. Install Dependencies
-```bash
-npm install
-```
-
-### 2. Run the Automated Test Suite
-```bash
-npm test
-```
-
-### 3. Launch the Platform
-```bash
-npm run dev
-```
-
-Open your browser at **[http://localhost:3000](http://localhost:3000)**.
-
-### 🔑 Credentials
-- **Email**: `admin@biopods.io` (or click **"AUTO-LOAD CREDENTIALS"**)
-- **Password**: `password`
-
----
-
-## ☸️ Connecting to Real Kubernetes (Kind / Minikube / Cloud)
-
-BioPods automatically detects your current Kubernetes context from `~/.kube/config` or in-cluster ServiceAccount credentials.
-
-### Deploying into a Cluster:
-
-```bash
-# 1. Apply RBAC and ServiceAccount
-kubectl apply -f k8s/biopods-rbac.yaml
-
-# 2. Deploy BioPods Orchestrator
-kubectl apply -f k8s/biopods-deployment.yaml
-
-# 3. Deploy Reproducible Chaos Workloads
-kubectl apply -f k8s/chaos-workloads.yaml
-```
-
----
-
-## 🛡️ Safety & Autonomy Levels
-
-| Level | Name | Autonomic Behavior |
-| :--- | :--- | :--- |
-| **Level 0** | `OBSERVE_ONLY` | Passive observability only. All remediations require human approval. |
-| **Level 1** | `RECOMMEND` | Synthesizes diagnoses and plans. Awaits approval before executing. |
-| **Level 2** | `AUTO_HEAL_LOW` | Automatically recycles low-risk pods; prompts for medium/high risk actions. |
-| **Level 3** | `AUTO_HEAL_MEDIUM` | **(Default)** Autonomously heals low and medium risk failures (pod restart, deployment scaling). |
-| **Level 4** | `FULL_AUTONOMY` | Fully autonomous recovery across all operational planes, except node cordoning. |
-
----
-
-## 🧪 Testing & Verification
-
-BioPods includes a test suite validating the policy engine, Kubernetes provider, and the multi-agent pipeline:
-
-```bash
-# Run unit, integration, and pipeline tests
-npm test
-
-# Build production assets
-npm run build
-```
-
----
-
-## 📚 Technical Documentation
-
-- **[Architecture Specification](docs/architecture.md)**
-- **[Multi-Agent System Reference](docs/agent-system.md)**
-- **[Kubernetes Integration Guide](docs/kubernetes.md)**
-- **[Safety & Security Architecture](docs/security.md)**
-- **[Chaos Scenarios & Failure Workloads](docs/chaos-scenarios.md)**
-- **[Architecture Audit & Migration Plan](docs/AUDIT_AND_MIGRATION_PLAN.md)**
-
----
-
-*BioPods — Autonomic Immune Orchestration for Cloud-Native Infrastructure.*
+1. **Safety First**: The LLM is never allowed to directly execute raw shell commands or raw `kubectl` invocations. Every remediation action must be represented as a structured, schema-validated action plan that passes through the Policy Safety Gate before reaching the Kubernetes API.
+2. **Dual-Mode Connectivity**: BioPods dynamically connects to live Kubernetes clusters using in-cluster ServiceAccount credentials or local `~/.kube/config`. When no cluster context is active, it seamlessly operates via an intelligent local simulation engine.
+3. **Verifiable Healing**: Actions are never assumed to succeed simply because the Kubernetes API accepted an HTTP patch. The Verification Agent actively polls container readiness, exit codes, and metrics stabilization over a verification window.
+4. **Self-Reinforcing Memory**: Every verified recovery updates the B-Cell vector memory repertoire, boosting confidence in proven strategies and dampening ineffective approaches.

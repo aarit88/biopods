@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: biopods-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: biopods-controller
+  namespace: biopods-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: biopods-operator-role
+rules:
+  # Pod discovery, log inspection, and recycling
+  - apiGroups: [""]
+    resources: ["pods", "pods/status"]
+    verbs: ["get", "list", "watch", "delete", "patch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+
+  # Nodes discovery and cordoning
+  - apiGroups: [""]
+    resources: ["nodes", "nodes/status"]
+    verbs: ["get", "list", "watch", "patch"]
+
+  # Deployment discovery, rolling restart, and autoscaling
+  - apiGroups: ["apps"]
+    resources: ["deployments", "deployments/scale", "deployments/status", "replicasets"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+
+  # Cluster events and namespaces
+  - apiGroups: [""]
+    resources: ["events", "namespaces", "services", "persistentvolumeclaims"]
+    verbs: ["get", "list", "watch"]
+
+  # Network policies for pod quarantine
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "list", "watch", "create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: biopods-operator-binding
+subjects:
+  - kind: ServiceAccount
+    name: biopods-controller
+    namespace: biopods-system
+roleRef:
+  kind: ClusterRole
+  name: biopods-operator-role
+  apiGroup: rbac.authorization.k8s.io

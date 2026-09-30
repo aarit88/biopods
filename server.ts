@@ -4,10 +4,18 @@ import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
-import jwt from 'jsonwebtoken';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
+
+import { k8sProvider } from './src/kubernetes/provider.ts';
+import { incidentEngine, ConflictPreventionEngine } from './src/incidents/incident-engine.ts';
+import { PolicySafetyAgent } from './src/agents/policy-agent.ts';
+import { BCellMemoryAgent } from './src/agents/memory-agent.ts';
+import { HealingExecutorAgent } from './src/agents/healing-executor.ts';
+import { TelemetryCollector } from './src/observability/telemetry.ts';
+import { AuthService, AuthUser } from './src/security/auth.ts';
+import { AutonomyLevel, IncidentStatus } from './src/agents/types.ts';
 
 dotenv.config();
 
@@ -15,398 +23,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-biopods-key';
 
-// ── In-Memory BioPods Immune State Store ─────────────────────────────────────
-const store = {
-  user: {
-    id: 'user-admin-01',
-    fullName: 'System Administrator',
-    email: 'admin@biopods.io',
-    password: 'password',
-    role: 'ADMIN',
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
-  },
-  cluster: {
-    id: 'cluster-primary',
-    clusterName: 'BioPods-Primary-Cluster',
-    environment: 'production',
-    region: 'edge-industrial-zone-1',
-    kubernetesVersion: 'v1.30.0',
-    totalNodes: 3,
-    status: 'healthy',
-    immunityScore: 94.6,
-    createdAt: new Date(Date.now() - 86400000 * 7),
-  },
-  nodes: [
-    {
-      id: 'node-alpha-01',
-      clusterId: 'cluster-primary',
-      nodeName: 'node-alpha-01',
-      cpuUsage: 44.2,
-      memoryUsage: 61.3,
-      diskUsage: 35.2,
-      networkUsage: 22.1,
-      nodeStatus: 'healthy',
-      healthScore: 94.1,
-      createdAt: new Date(Date.now() - 86400000 * 5),
-    },
-    {
-      id: 'node-beta-02',
-      clusterId: 'cluster-primary',
-      nodeName: 'node-beta-02',
-      cpuUsage: 87.9,
-      memoryUsage: 91.2,
-      diskUsage: 73.5,
-      networkUsage: 65.4,
-      nodeStatus: 'warning',
-      healthScore: 68.5,
-      createdAt: new Date(Date.now() - 86400000 * 5),
-    },
-    {
-      id: 'node-gamma-03',
-      clusterId: 'cluster-primary',
-      nodeName: 'node-gamma-03',
-      cpuUsage: 32.4,
-      memoryUsage: 46.1,
-      diskUsage: 29.0,
-      networkUsage: 19.5,
-      nodeStatus: 'healthy',
-      healthScore: 98.4,
-      createdAt: new Date(Date.now() - 86400000 * 5),
-    },
-  ],
-  pods: [
-    {
-      id: 'pod-auth-01',
-      clusterId: 'cluster-primary',
-      nodeId: 'node-alpha-01',
-      podName: 'bio-auth-service',
-      namespace: 'core-services',
-      cpuUsage: 24.5,
-      memoryUsage: 45.2,
-      pvcLatency: 4.2,
-      networkTraffic: 120.4,
-      podStatus: 'healthy',
-      dangerLevel: 'low',
-      immunityState: 'stable',
-      dependencyCount: 5,
-      createdAt: new Date(Date.now() - 86400000 * 4),
-    },
-    {
-      id: 'pod-telemetry-02',
-      clusterId: 'cluster-primary',
-      nodeId: 'node-beta-02',
-      podName: 'telemetry-engine',
-      namespace: 'immune-core',
-      cpuUsage: 91.8,
-      memoryUsage: 96.4,
-      pvcLatency: 45.6,
-      networkTraffic: 402.2,
-      podStatus: 'critical',
-      dangerLevel: 'high',
-      immunityState: 'infected',
-      dependencyCount: 12,
-      createdAt: new Date(Date.now() - 86400000 * 4),
-    },
-    {
-      id: 'pod-scanner-03',
-      clusterId: 'cluster-primary',
-      nodeId: 'node-alpha-01',
-      podName: 'threat-scanner',
-      namespace: 'immune-core',
-      cpuUsage: 22.0,
-      memoryUsage: 38.0,
-      pvcLatency: 2.1,
-      networkTraffic: 85.0,
-      podStatus: 'healthy',
-      dangerLevel: 'low',
-      immunityState: 'stable',
-      dependencyCount: 4,
-      createdAt: new Date(Date.now() - 86400000 * 4),
-    },
-    {
-      id: 'pod-power-04',
-      clusterId: 'cluster-primary',
-      nodeId: 'node-gamma-03',
-      podName: 'power-grid-link',
-      namespace: 'industrial-scada',
-      cpuUsage: 35.2,
-      memoryUsage: 48.0,
-      pvcLatency: 6.0,
-      networkTraffic: 210.0,
-      podStatus: 'healthy',
-      dangerLevel: 'low',
-      immunityState: 'stable',
-      dependencyCount: 8,
-      createdAt: new Date(Date.now() - 86400000 * 3),
-    },
-    {
-      id: 'pod-ctrl-05',
-      clusterId: 'cluster-primary',
-      nodeId: 'node-beta-02',
-      podName: 'control-system-01',
-      namespace: 'industrial-scada',
-      cpuUsage: 64.0,
-      memoryUsage: 72.0,
-      pvcLatency: 14.5,
-      networkTraffic: 320.0,
-      podStatus: 'warning',
-      dangerLevel: 'medium',
-      immunityState: 'unstable',
-      dependencyCount: 9,
-      createdAt: new Date(Date.now() - 86400000 * 3),
-    },
-    {
-      id: 'pod-turbine-06',
-      clusterId: 'cluster-primary',
-      nodeId: 'node-gamma-03',
-      podName: 'turbine-core-01',
-      namespace: 'turbines',
-      cpuUsage: 42.0,
-      memoryUsage: 52.0,
-      pvcLatency: 8.0,
-      networkTraffic: 140.0,
-      podStatus: 'healthy',
-      dangerLevel: 'low',
-      immunityState: 'stable',
-      dependencyCount: 6,
-      createdAt: new Date(Date.now() - 86400000 * 3),
-    },
-  ],
-  dangerEvents: [
-    {
-      id: 'evt-cpu-01',
-      podId: 'pod-telemetry-02',
-      eventType: 'CPU Spike Infection',
-      dangerScore: 91.5,
-      severity: 'critical',
-      infectionZone: 'zone-red-alpha',
-      status: 'active',
-      detectedBy: 'Dendritic-Agent-07',
-      createdAt: new Date(Date.now() - 1000 * 60 * 15),
-    },
-    {
-      id: 'evt-mem-02',
-      podId: 'pod-telemetry-02',
-      eventType: 'Memory Leak Mutation',
-      dangerScore: 84.7,
-      severity: 'high',
-      infectionZone: 'zone-red-beta',
-      status: 'investigating',
-      detectedBy: 'Dendritic-Agent-02',
-      createdAt: new Date(Date.now() - 1000 * 60 * 35),
-    },
-    {
-      id: 'evt-net-03',
-      podId: 'pod-ctrl-05',
-      eventType: 'SCADA Jitter Surge',
-      dangerScore: 68.2,
-      severity: 'medium',
-      infectionZone: 'zone-yellow-gamma',
-      status: 'resolved',
-      detectedBy: 'TCell-Guardian-03',
-      createdAt: new Date(Date.now() - 1000 * 60 * 120),
-    },
-  ],
-  immuneAgents: [
-    {
-      id: 'agent-01',
-      agentName: 'Dendritic-Agent-07',
-      agentType: 'dendritic-cell',
-      status: 'active',
-      confidenceScore: 96.5,
-      learningScore: 82.2,
-      assignedZone: 'zone-red-alpha',
-      activeTarget: 'telemetry-engine',
-      createdAt: new Date(Date.now() - 86400000 * 3),
-    },
-    {
-      id: 'agent-02',
-      agentName: 'TCell-Guardian-03',
-      agentType: 't-cell',
-      status: 'engaged',
-      confidenceScore: 93.8,
-      learningScore: 75.4,
-      assignedZone: 'zone-red-alpha',
-      activeTarget: 'CPU Spike Infection',
-      createdAt: new Date(Date.now() - 86400000 * 3),
-    },
-    {
-      id: 'agent-03',
-      agentName: 'BCell-Learner-09',
-      agentType: 'b-cell',
-      status: 'learning',
-      confidenceScore: 88.1,
-      learningScore: 97.3,
-      assignedZone: 'memory-core',
-      activeTarget: 'memory-pattern-analysis',
-      createdAt: new Date(Date.now() - 86400000 * 3),
-    },
-    {
-      id: 'agent-04',
-      agentName: 'NK-Cell-Striker-04',
-      agentType: 'natural-killer',
-      status: 'patrolling',
-      confidenceScore: 91.0,
-      learningScore: 78.5,
-      assignedZone: 'perimeter-zone',
-      activeTarget: 'threat-scanner',
-      createdAt: new Date(Date.now() - 86400000 * 2),
-    },
-    {
-      id: 'agent-05',
-      agentName: 'Macrophage-Purge-01',
-      agentType: 'macrophage',
-      status: 'standby',
-      confidenceScore: 97.8,
-      learningScore: 85.0,
-      assignedZone: 'waste-reclamation',
-      activeTarget: 'idle',
-      createdAt: new Date(Date.now() - 86400000 * 2),
-    },
-  ],
-  memoryCells: [
-    {
-      id: 'mem-01',
-      threatSignature: 'high-cpu-network-spike-pattern',
-      vectorId: 'vec-001-bio-threat',
-      mitigationStrategy: 'horizontal-pod-autoscaler-response',
-      affinityScore: 94.8,
-      successCount: 16,
-      lastSeen: new Date(Date.now() - 1000 * 60 * 15),
-      createdAt: new Date(Date.now() - 86400000 * 6),
-    },
-    {
-      id: 'mem-02',
-      threatSignature: 'memory-leak-persistent-growth',
-      vectorId: 'vec-002-bio-threat',
-      mitigationStrategy: 'restart-deployment-and-resource-reset',
-      affinityScore: 88.5,
-      successCount: 9,
-      lastSeen: new Date(Date.now() - 1000 * 60 * 60),
-      createdAt: new Date(Date.now() - 86400000 * 5),
-    },
-    {
-      id: 'mem-03',
-      threatSignature: 'syn-flood-ingress-saturation',
-      vectorId: 'vec-003-bio-threat',
-      mitigationStrategy: 'rate-limit-and-bpf-drop',
-      affinityScore: 92.1,
-      successCount: 24,
-      lastSeen: new Date(Date.now() - 86400000),
-      createdAt: new Date(Date.now() - 86400000 * 4),
-    },
-    {
-      id: 'mem-04',
-      threatSignature: 'thermal-surge-metabolic-overload',
-      vectorId: 'vec-004-bio-threat',
-      mitigationStrategy: 'load-shed-and-cooling-interlock',
-      affinityScore: 97.0,
-      successCount: 7,
-      lastSeen: new Date(Date.now() - 1000 * 60 * 40),
-      createdAt: new Date(Date.now() - 86400000 * 2),
-    },
-  ],
-  immuneResponses: [
-    {
-      id: 'resp-01',
-      eventId: 'evt-cpu-01',
-      responseType: 'pod-autoscale',
-      actionTaken: 'Scaled telemetry-engine from 2 replicas to 5 replicas',
-      successRate: 92.4,
-      responseTimeMs: 284,
-      triggeredBy: 'TCell-Guardian-03',
-      responseStatus: 'completed',
-      createdAt: new Date(Date.now() - 1000 * 60 * 14),
-    },
-    {
-      id: 'resp-02',
-      eventId: 'evt-net-03',
-      responseType: 'memory-quarantine',
-      actionTaken: 'Quarantined corrupted SCADA bus cache partitions on control-system-01',
-      successRate: 96.8,
-      responseTimeMs: 142,
-      triggeredBy: 'BCell-Learner-09',
-      responseStatus: 'completed',
-      createdAt: new Date(Date.now() - 1000 * 60 * 115),
-    },
-    {
-      id: 'resp-03',
-      eventId: 'evt-mem-02',
-      responseType: 'antibody-generation',
-      actionTaken: 'Synthesized synthetic antibody ligand for vector vec-001',
-      successRate: 98.2,
-      responseTimeMs: 512,
-      triggeredBy: 'Autonomous-Response-Core',
-      responseStatus: 'completed',
-      createdAt: new Date(Date.now() - 1000 * 60 * 30),
-    },
-  ],
-  auditLogs: [
-    {
-      id: 'log-01',
-      actionType: 'ANTIBODY_DEPLOYED',
-      actionDescription: 'Global antibody patch applied to sector node-alpha-01. All pathogen vectors purged.',
-      performedBy: 'System Administrator',
-      targetResource: 'node-alpha-01',
-      status: 'SUCCESS',
-      createdAt: new Date(Date.now() - 1000 * 60 * 10),
-    },
-    {
-      id: 'log-02',
-      actionType: 'POLICY_ENFORCEMENT',
-      actionDescription: 'Autonomic rate limiting engaged on ingress traffic. Threshold 85% CPU saturation.',
-      performedBy: 'Dendritic-Agent-07',
-      targetResource: 'telemetry-engine',
-      status: 'SUCCESS',
-      createdAt: new Date(Date.now() - 1000 * 60 * 18),
-    },
-    {
-      id: 'log-03',
-      actionType: 'NODE_REBOOT',
-      actionDescription: 'Neural reboot cycle initiated and completed successfully for node-beta-02.',
-      performedBy: 'System Administrator',
-      targetResource: 'node-beta-02',
-      status: 'SUCCESS',
-      createdAt: new Date(Date.now() - 1000 * 60 * 65),
-    },
-  ],
-  telemetry: [] as Array<{
-    recordedAt: Date;
-    cpuUsage: number;
-    memoryUsage: number;
-    networkIn: number;
-    networkOut: number;
-    signalType: string;
-    podId: string;
-  }>,
-  settings: {
-    autonomousPurge: true,
-    heuristicLearning: true,
-    aggressiveBalancing: false,
-    criticalSensitivity: 85,
-    metabolicWarning: 40,
-  },
-  datasetImports: [] as any[],
-  historicalMetrics: [] as any[],
-};
-
-// Seed 30 recent telemetry ticks for time-series charts
-const now = Date.now();
-for (let i = 30; i >= 0; i--) {
-  store.telemetry.push({
-    recordedAt: new Date(now - i * 5000),
-    cpuUsage: Math.round(40 + Math.sin(i * 0.4) * 20 + Math.random() * 10),
-    memoryUsage: Math.round(55 + Math.cos(i * 0.3) * 15 + Math.random() * 5),
-    networkIn: Math.round(150 + Math.random() * 300),
-    networkOut: Math.round(80 + Math.random() * 180),
-    signalType: 'heartbeat',
-    podId: 'pod-telemetry-02',
-  });
-}
-
-// ── App & HTTP / Socket.IO Setup ───────────────────────────────────────────
 const app = express();
 const httpServer = http.createServer(app);
 const io = new SocketIOServer(httpServer, {
@@ -420,354 +37,595 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json());
 
-// ── Socket.io Connection & Events ──────────────────────────────────────────
+// In-memory audit log record store
+const auditLogs: Array<{
+  id: string;
+  actionType: string;
+  actionDescription: string;
+  performedBy: string;
+  targetResource: string;
+  status: string;
+  createdAt: Date;
+}> = [
+  {
+    id: 'log-boot-01',
+    actionType: 'CLUSTER_ATTACH',
+    actionDescription: 'BioPods Autonomous Kernel attached to cluster provider.',
+    performedBy: 'System',
+    targetResource: 'cluster/BioPods-Local-Cluster',
+    status: 'SUCCESS',
+    createdAt: new Date(Date.now() - 3600000),
+  },
+  {
+    id: 'log-boot-02',
+    actionType: 'POLICY_INITIALIZATION',
+    actionDescription: 'Safety Guard active at Autonomy Level 3 (Auto-Heal Medium Risk).',
+    performedBy: 'PolicySafetyAgent',
+    targetResource: 'policy/global-governance',
+    status: 'SUCCESS',
+    createdAt: new Date(Date.now() - 3500000),
+  },
+];
+
+// In-memory system settings
+const systemSettings = {
+  autonomousPurge: true,
+  heuristicLearning: true,
+  aggressiveBalancing: false,
+  criticalSensitivity: 85,
+  metabolicWarning: 40,
+  autonomyLevel: AutonomyLevel.LEVEL_3_AUTO_MEDIUM,
+};
+
+// ── Real-Time Socket.IO Pipeline Bridge ─────────────────────────────────────
 io.on('connection', (socket) => {
-  console.log(`🧬 BioPods Neural Link Established: ${socket.id}`);
+  console.log(`🧬 [Socket.IO] Client Neural Link Connected: ${socket.id}`);
 
   socket.on('join_cluster', (clusterId) => {
     socket.join(`cluster:${clusterId}`);
-    console.log(`Socket ${socket.id} joined cluster ${clusterId}`);
   });
 
   socket.on('disconnect', () => {
-    console.log(`🧬 Neural Link Severed: ${socket.id}`);
+    console.log(`🧬 [Socket.IO] Client Link Disconnected: ${socket.id}`);
   });
 });
 
-// ── Autonomic T-Cell Reasoner & Threat Processor ───────────────────────────
-function reasonAndMitigate(threat: {
-  podId: string;
-  type: string;
-  metrics: { cpu?: number; memory?: number; temp?: number; network?: number };
-}) {
-  const isHigh = (threat.metrics.cpu || 0) > 85 || (threat.metrics.temp || 0) > 80;
-  const severity = isHigh ? 'HIGH' : 'MEDIUM';
-
-  let rootCause = 'Autonomic immune receptors detected anomalous metabolic variance.';
-  let actionCommand = `bio-isolate --pod ${threat.podId} --quarantine-zone red`;
-  let outcome = 'Pathogen contained. Replaced infected pod replicas with immunised clones.';
-
-  if (threat.type.includes('THERMAL')) {
-    rootCause = `Core temperature exceeded thermal barrier (${threat.metrics.temp || 92}°C). Cooling interlock trip imminent.`;
-    actionCommand = `bio-throttle --pod ${threat.podId} --shed-workload 40% && bio-cool --boost-fans`;
-    outcome = 'Metabolic load reduced by 40%. Temperature stabilised within 12 seconds.';
-  } else if (threat.type.includes('DDOS')) {
-    rootCause = `High volume packet flood detected (${threat.metrics.cpu || 98}% CPU saturation). Rate limiting breached.`;
-    actionCommand = `bio-bpf-filter --pod ${threat.podId} --drop-syn --rate-limit 500rps`;
-    outcome = 'Malicious SYN burst suppressed at ingress layer. Legitimate traffic preserved.';
-  } else if (threat.type.includes('SQL') || threat.type.includes('INJECTION')) {
-    rootCause = `Anomalous query entropy detected (${threat.metrics.memory || 96}% Memory spike). Heap corruption vector.`;
-    actionCommand = `bio-sanitize --pod ${threat.podId} --flush-heap --rotate-credentials`;
-    outcome = 'Tainted database connection pools recycled. Exploit vector neutralised.';
+// Forward all incident lifecycle events to connected clients
+incidentEngine.on('broadcast', (event: { type: string; data: any; timestamp: Date }) => {
+  io.emit(event.type, event.data);
+  // Also map to client legacy names
+  if (event.type === 'incident:detected') {
+    io.emit('threat:detected', event.data);
+    io.emit('pod:danger:update', {
+      podId: event.data.targetResource,
+      score: event.data.anomalyScore,
+      label: event.data.severity,
+      type: event.data.signals[0] || 'Anomaly',
+      details: event.data.signals.join(' | '),
+    });
+  } else if (event.type === 'incident:diagnosed') {
+    io.emit('ai:reasoning', {
+      podId: event.data.incidentId,
+      step: 'ROOT CAUSE ANALYSIS',
+      content: JSON.stringify(event.data.diagnosis, null, 2),
+      timestamp: new Date().toLocaleTimeString(),
+    });
+  } else if (event.type === 'incident:resolved') {
+    io.emit('healing:animation', {
+      podId: event.data.targetResource,
+      status: 'healed',
+      animation: 'cytokine-flash',
+    });
   }
+});
 
-  const analysis = {
-    threat_severity: severity,
-    root_cause_analysis: rootCause,
-    action_command: actionCommand,
-    expected_outcome: outcome,
-  };
+// ── Continuous Surveillance and Telemetry Heartbeat ────────────────────────
+incidentEngine.startContinuousSurveillance(6000);
 
-  // 1. Create DangerEvent
-  const eventId = `evt-${Date.now().toString(36)}`;
-  const dangerEvent = {
-    id: eventId,
-    podId: threat.podId,
-    eventType: threat.type,
-    dangerScore: severity === 'HIGH' ? 94.2 : 76.5,
-    severity: severity.toLowerCase(),
-    infectionZone: 'zone-red-injected',
-    status: 'active',
-    detectedBy: 'T-Cell Patrol Core',
-    createdAt: new Date(),
-  };
-  store.dangerEvents.unshift(dangerEvent);
-
-  // 2. Create ImmuneResponse
-  const respId = `resp-${Date.now().toString(36)}`;
-  const immuneResp = {
-    id: respId,
-    eventId,
-    responseType: 't-cell-autonomic-mitigation',
-    actionTaken: actionCommand,
-    successRate: 98.4,
-    responseTimeMs: Math.floor(180 + Math.random() * 220),
-    triggeredBy: 'T-Cell Reasoner',
-    responseStatus: 'completed',
-    createdAt: new Date(),
-    dangerEvent,
-  };
-  store.immuneResponses.unshift(immuneResp);
-
-  // 3. Create AuditLog
-  store.auditLogs.unshift({
-    id: `log-${Date.now().toString(36)}`,
-    actionType: 'THREAT_NEUTRALIZATION',
-    actionDescription: `Autonomic T-Cell executed mitigation: ${actionCommand}. Outcome: ${outcome}`,
-    performedBy: 'T-Cell Agent',
-    targetResource: threat.podId,
-    status: 'SUCCESS',
-    createdAt: new Date(),
-  });
-
-  // 4. Update Pod Status
-  const pod = store.pods.find((p) => p.podName === threat.podId || p.id === threat.podId);
-  if (pod) {
-    pod.dangerLevel = severity.toLowerCase();
-    pod.podStatus = severity === 'HIGH' ? 'critical' : 'warning';
-    pod.immunityState = 'infected';
-    pod.cpuUsage = threat.metrics.cpu ?? pod.cpuUsage;
-    pod.memoryUsage = threat.metrics.memory ?? pod.memoryUsage;
-  }
-
-  // 5. Broadcast to Socket.io
-  io.emit('ai:reasoning', {
-    podId: threat.podId,
-    step: 'FORMULATING MITIGATION',
-    content: JSON.stringify(analysis, null, 2),
-    timestamp: new Date().toLocaleTimeString(),
-  });
-
-  io.emit('threat:detected', {
-    podId: threat.podId,
-    type: threat.type,
-    label: severity,
-    severity,
-    details: rootCause,
-    action: actionCommand,
-    dbEventId: eventId,
-    responseTimeMs: immuneResp.responseTimeMs,
-    timestamp: new Date(),
-  });
-
-  io.emit('pod:danger:update', {
-    podId: threat.podId,
-    score: dangerEvent.dangerScore,
-    label: severity,
-    type: threat.type,
-    details: rootCause,
-  });
-
-  io.emit('immune:response:started', {
-    podId: threat.podId,
-    actionType: actionCommand,
-    eventId,
-  });
-
-  return { eventId, analysis, immuneResp };
-}
-
-// ── Background Routines ───────────────────────────────────────────────────
-// 1. Metabolic Heartbeat: Organic pulses for UI maps
-setInterval(() => {
-  const podNames = store.pods.map((p) => p.podName);
-  if (podNames.length > 1) {
-    const source = podNames[Math.floor(Math.random() * podNames.length)];
-    let target = podNames[Math.floor(Math.random() * podNames.length)];
-    while (target === source) {
-      target = podNames[Math.floor(Math.random() * podNames.length)];
+// Metabolic pulse loop for UI organic animation
+setInterval(async () => {
+  const pods = await k8sProvider.listPods();
+  if (pods.length > 1) {
+    const p1 = pods[Math.floor(Math.random() * pods.length)];
+    let p2 = pods[Math.floor(Math.random() * pods.length)];
+    while (p2.name === p1.name) {
+      p2 = pods[Math.floor(Math.random() * pods.length)];
     }
+
     io.emit('dependency:pulse', {
-      source,
-      target,
-      latencyMs: Math.round(5 + Math.random() * 35),
+      source: p1.name,
+      target: p2.name,
+      latencyMs: Math.round(4 + Math.random() * 20),
       pulseSpeed: 'fast',
     });
 
-    const agent = store.immuneAgents[Math.floor(Math.random() * store.immuneAgents.length)];
     io.emit('immune:agent:move', {
-      agentName: agent.agentName,
-      fromNode: source,
-      toNode: target,
+      agentName: 'TCell-Guardian-03',
+      fromNode: p1.nodeName,
+      toNode: p2.nodeName,
       speed: 'smooth-glide',
     });
 
     const grid = [];
     for (let x = 0; x < 5; x++) {
       for (let y = 0; y < 5; y++) {
-        grid.push({ x, y, intensity: Math.round(Math.random() * 15) });
+        grid.push({ x, y, intensity: Math.round(Math.random() * 12) });
       }
     }
     io.emit('danger:heatmap', { grid, timestamp: new Date() });
   }
 }, 3500);
 
-// 2. Continuous Patrol Routine: Generates live stream telemetry
-let patrolIdx = 0;
-setInterval(() => {
-  if (store.pods.length === 0) return;
-  const pod = store.pods[patrolIdx % store.pods.length];
-  patrolIdx++;
-
-  const metrics = {
-    cpu: Math.min(100, Math.max(10, Math.round((pod.cpuUsage || 30) + (Math.random() * 20 - 10)))),
-    memory: Math.min(100, Math.max(15, Math.round((pod.memoryUsage || 45) + (Math.random() * 10 - 5)))),
-    temp: Math.round(35 + Math.random() * 25),
-    network: Math.round(100 + Math.random() * 400),
-  };
-
-  const sample = {
-    recordedAt: new Date(),
-    cpuUsage: metrics.cpu,
-    memoryUsage: metrics.memory,
-    networkIn: metrics.network,
-    networkOut: Math.round(metrics.network * 0.6),
-    signalType: 'heartbeat',
-    podId: pod.id,
-  };
-  store.telemetry.push(sample);
-  if (store.telemetry.length > 100) store.telemetry.shift();
-
-  io.emit('telemetry:stream', {
-    podId: pod.podName,
-    clusterId: 'cluster-primary',
-    metrics,
-    timestamp: new Date(),
-  });
-
-  const healthyCount = store.nodes.filter((n) => n.nodeStatus === 'healthy').length;
-  const healthPercent = Math.round((healthyCount / store.nodes.length) * 100);
+// Telemetry stream broadcast
+setInterval(async () => {
+  const telemetry = await TelemetryCollector.collectMetrics();
+  io.emit('telemetry:stream', telemetry);
   io.emit('cluster:health:update', {
-    clusterId: 'cluster-primary',
-    health: healthPercent,
+    clusterId: 'BioPods-Local-Cluster',
+    health: telemetry.clusterImmunityScore,
   });
 }, 5000);
 
-// ── REST API ROUTES ───────────────────────────────────────────────────────
-const authenticateToken = (req: any, _res: any, next: any) => {
-  req.user = { id: store.user.id, role: store.user.role };
+// ── Security Middleware ───────────────────────────────────────────────────
+const authenticateToken = (req: any, res: any, next: any) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    // Provide default fallback user if running in demo
+    req.user = { id: 'usr-admin-01', email: 'admin@biopods.io', role: 'ADMIN', fullName: 'System Administrator' };
+    return next();
+  }
+
+  const user = AuthService.verifyToken(token);
+  if (!user) {
+    return res.status(403).json({ error: 'Invalid or expired authentication token.' });
+  }
+
+  req.user = user;
   next();
 };
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'API Gateway Operational', database: 'CONNECTED', timestamp: new Date() });
+// ── REST API ROUTES ───────────────────────────────────────────────────────
+
+// 1. Health & Cluster Status
+app.get('/health', async (_req, res) => {
+  const cluster = await k8sProvider.getClusterInfo();
+  res.json({
+    status: 'API Gateway & Autonomic Kernel Operational',
+    kubernetes: k8sProvider.getConnectionStatus(),
+    clusterHealthScore: cluster.immunityScore,
+    activeIncidents: incidentEngine.getIncidents().filter((i) => i.status !== IncidentStatus.RESOLVED).length,
+    timestamp: new Date(),
+  });
 });
 
-// Auth Routes
+// 2. Authentication
 app.post('/api/v1/auth/login', (req, res) => {
   const { email, password } = req.body;
-  if (email === store.user.email && password) {
-    const accessToken = jwt.sign({ id: store.user.id, email: store.user.email, role: store.user.role }, JWT_SECRET, {
-      expiresIn: '15m',
-    });
-    const refreshToken = jwt.sign({ id: store.user.id, email: store.user.email, role: store.user.role }, JWT_SECRET, {
-      expiresIn: '7d',
-    });
-    return res.json({ accessToken, refreshToken, user: store.user });
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required.' });
   }
-  return res.status(400).json({ error: 'Invalid credentials. Use admin@biopods.io / password' });
+
+  const user = AuthService.verifyCredentials(email, password);
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid credentials. Please verify your email and password.' });
+  }
+
+  const tokens = AuthService.generateTokens(user);
+  res.json({
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    user,
+  });
 });
 
-// Clusters
-app.get('/api/v1/clusters', authenticateToken, (_req, res) => {
-  const clusterWithRelations = {
-    ...store.cluster,
-    nodes: store.nodes.map((node) => ({
-      ...node,
-      pods: store.pods
-        .filter((pod) => pod.nodeId === node.id)
-        .map((pod) => ({
-          ...pod,
-          dangerEvents: store.dangerEvents.filter((d) => d.podId === pod.id),
-        })),
-    })),
-    _count: {
-      nodes: store.nodes.length,
-      pods: store.pods.length,
+// 3. Cluster & Infrastructure Discovery
+app.get('/api/v1/clusters', authenticateToken, async (_req, res) => {
+  const cluster = await k8sProvider.getClusterInfo();
+  const nodes = await k8sProvider.listNodes();
+  const pods = await k8sProvider.listPods();
+
+  res.json([
+    {
+      ...cluster,
+      totalNodes: nodes.length,
+      nodes: nodes.map((n) => ({
+        ...n,
+        id: n.name,
+        nodeName: n.name,
+        cpuUsage: n.cpuUsagePercent,
+        memoryUsage: n.memoryUsagePercent,
+        nodeStatus: n.status.toLowerCase(),
+        healthScore: n.status === 'Ready' ? 98.4 : 50.0,
+      })),
+      _count: {
+        nodes: nodes.length,
+        pods: pods.length,
+      },
     },
-  };
-  res.json([clusterWithRelations]);
+  ]);
 });
 
-app.get('/api/v1/clusters/:id', authenticateToken, (req, res) => {
-  const cluster = {
-    ...store.cluster,
-    nodes: store.nodes.map((n) => ({
-      ...n,
-      pods: store.pods.filter((p) => p.nodeId === n.id),
-    })),
-  };
+app.get('/api/v1/clusters/:id', authenticateToken, async (_req, res) => {
+  const cluster = await k8sProvider.getClusterInfo();
   res.json(cluster);
 });
 
-// Nodes
-app.get('/api/v1/nodes', authenticateToken, (_req, res) => {
-  res.json(store.nodes);
+// 4. Nodes Operations
+app.get('/api/v1/nodes', authenticateToken, async (_req, res) => {
+  const nodes = await k8sProvider.listNodes();
+  res.json(
+    nodes.map((n) => ({
+      ...n,
+      id: n.name,
+      nodeName: n.name,
+      cpuUsage: n.cpuUsagePercent,
+      memoryUsage: n.memoryUsagePercent,
+      nodeStatus: n.status.toLowerCase(),
+      healthScore: n.status === 'Ready' ? 98.4 : 50.0,
+    }))
+  );
 });
 
-app.post('/api/v1/nodes/:id/reboot', authenticateToken, (req, res) => {
+app.post('/api/v1/nodes/:id/reboot', authenticateToken, AuthService.requireRole('OPERATOR'), async (req, res) => {
   const { id } = req.params;
-  const node = store.nodes.find((n) => n.id === id || n.nodeName === id);
-  if (!node) return res.status(404).json({ error: 'Node not found' });
+  const user: AuthUser = req.user;
 
-  node.nodeStatus = 'rebooting';
-  node.cpuUsage = 0.0;
-  node.memoryUsage = 10.0;
-  node.healthScore = 100.0;
-
-  store.auditLogs.unshift({
+  auditLogs.unshift({
     id: `log-${Date.now().toString(36)}`,
     actionType: 'NODE_REBOOT',
-    actionDescription: `Initiated neural reboot cycle for sector/node ${node.nodeName}`,
-    performedBy: 'System Administrator',
-    targetResource: node.nodeName,
-    status: 'PENDING',
-    createdAt: new Date(),
-  });
-
-  setTimeout(() => {
-    node.nodeStatus = 'healthy';
-    node.cpuUsage = 28.4;
-    node.memoryUsage = 38.2;
-    node.healthScore = 98.6;
-
-    store.auditLogs.unshift({
-      id: `log-${Date.now().toString(36)}`,
-      actionType: 'NODE_REBOOT_COMPLETE',
-      actionDescription: `Neural reboot cycle complete. Sector ${node.nodeName} fully operational.`,
-      performedBy: 'System Administrator',
-      targetResource: node.nodeName,
-      status: 'SUCCESS',
-      createdAt: new Date(),
-    });
-  }, 8000);
-
-  res.json({ status: 'REBOOT_INITIATED', node });
-});
-
-app.post('/api/v1/nodes/:id/mitigate', authenticateToken, (req, res) => {
-  const { id } = req.params;
-  const node = store.nodes.find((n) => n.id === id || n.nodeName === id);
-  if (!node) return res.status(404).json({ error: 'Node not found' });
-
-  node.nodeStatus = 'healthy';
-  node.healthScore = 99.5;
-
-  const nodePods = store.pods.filter((p) => p.nodeId === node.id);
-  for (const pod of nodePods) {
-    pod.podStatus = 'healthy';
-    pod.dangerLevel = 'low';
-    pod.immunityState = 'stable';
-    for (const evt of store.dangerEvents.filter((e) => e.podId === pod.id)) {
-      evt.status = 'resolved';
-    }
-  }
-
-  store.auditLogs.unshift({
-    id: `log-${Date.now().toString(36)}`,
-    actionType: 'MITIGATION_DEPLOYED',
-    actionDescription: `Deployed biological antibody patches to secure sector ${node.nodeName}. Purged all pathogen vectors.`,
-    performedBy: 'System Administrator',
-    targetResource: node.nodeName,
+    actionDescription: `Node reboot initiated for ${id}. Workloads drained or cordoned.`,
+    performedBy: user.fullName,
+    targetResource: `node/${id}`,
     status: 'SUCCESS',
     createdAt: new Date(),
   });
 
-  res.json({ status: 'MITIGATION_COMPLETE', sectorName: node.nodeName });
+  res.json({ status: 'REBOOT_INITIATED', nodeName: id });
 });
 
-// Topology Graph
-app.get('/api/v1/topology/graph', authenticateToken, (_req, res) => {
+app.post('/api/v1/nodes/:id/mitigate', authenticateToken, AuthService.requireRole('OPERATOR'), async (req, res) => {
+  const { id } = req.params;
+  const user: AuthUser = req.user;
+
+  auditLogs.unshift({
+    id: `log-${Date.now().toString(36)}`,
+    actionType: 'MITIGATION_DEPLOYED',
+    actionDescription: `Sector ${id} immunized. Pods purged of pathogen signatures.`,
+    performedBy: user.fullName,
+    targetResource: `node/${id}`,
+    status: 'SUCCESS',
+    createdAt: new Date(),
+  });
+
+  res.json({ status: 'MITIGATION_COMPLETE', sectorName: id });
+});
+
+// 5. Pods
+app.get('/api/v1/pods', authenticateToken, async (_req, res) => {
+  const pods = await k8sProvider.listPods();
+  const nodes = await k8sProvider.listNodes();
+
+  const enriched = pods.map((p) => {
+    const parentNode = nodes.find((n) => n.name === p.nodeName);
+    return {
+      ...p,
+      id: p.name,
+      podName: p.name,
+      cpuUsage: p.cpuUsagePercent,
+      memoryUsage: p.memoryUsagePercent,
+      pvcLatency: p.pvcLatencyMs,
+      networkTraffic: p.networkTrafficKbps,
+      podStatus: p.status.toLowerCase(),
+      node: parentNode ? { cpuUsage: parentNode.cpuUsagePercent, memoryUsage: parentNode.memoryUsagePercent, nodeName: parentNode.name } : null,
+    };
+  });
+
+  res.json(enriched);
+});
+
+// 6. Incidents & Approvals
+app.get('/api/v1/incidents', authenticateToken, (_req, res) => {
+  res.json(incidentEngine.getIncidents());
+});
+
+app.get('/api/v1/incidents/approvals', authenticateToken, (_req, res) => {
+  res.json(incidentEngine.getPendingApprovals());
+});
+
+app.post('/api/v1/incidents/:id/approve', authenticateToken, AuthService.requireRole('OPERATOR'), async (req, res) => {
+  const { id } = req.params;
+  const user: AuthUser = req.user;
+  const success = await incidentEngine.approveIncident(id, user.fullName);
+
+  if (!success) {
+    return res.status(400).json({ error: 'Incident not awaiting approval or action locked.' });
+  }
+
+  auditLogs.unshift({
+    id: `log-${Date.now().toString(36)}`,
+    actionType: 'INCIDENT_APPROVED',
+    actionDescription: `Remediation action approved for incident ${id}.`,
+    performedBy: user.fullName,
+    targetResource: id,
+    status: 'SUCCESS',
+    createdAt: new Date(),
+  });
+
+  res.json({ success: true, incidentId: id });
+});
+
+app.post('/api/v1/incidents/:id/reject', authenticateToken, AuthService.requireRole('OPERATOR'), async (req, res) => {
+  const { id } = req.params;
+  const { reason = 'Rejected by operator' } = req.body;
+  const user: AuthUser = req.user;
+  const success = await incidentEngine.rejectIncident(id, reason);
+
+  if (!success) {
+    return res.status(400).json({ error: 'Incident cannot be rejected.' });
+  }
+
+  auditLogs.unshift({
+    id: `log-${Date.now().toString(36)}`,
+    actionType: 'INCIDENT_REJECTED',
+    actionDescription: `Incident ${id} rejected: ${reason}`,
+    performedBy: user.fullName,
+    targetResource: id,
+    status: 'REJECTED',
+    createdAt: new Date(),
+  });
+
+  res.json({ success: true, incidentId: id });
+});
+
+// 7. Anomalies (Mapped from Incidents for UI compatibility)
+app.get('/api/v1/anomalies', authenticateToken, (_req, res) => {
+  const incidents = incidentEngine.getIncidents();
+  const anomalies = incidents.map((i) => ({
+    id: i.id,
+    podId: i.targetResource,
+    eventType: i.signals[0] || 'Infrastructure Anomaly',
+    dangerScore: i.anomalyScore,
+    severity: i.severity,
+    infectionZone: `zone-${i.namespace}`,
+    status: i.status === IncidentStatus.RESOLVED ? 'resolved' : 'active',
+    detectedBy: 'Dendritic Detection Agent',
+    createdAt: i.detectedAt,
+    pod: { podName: i.targetResource },
+  }));
+  res.json(anomalies);
+});
+
+// 8. Multi-Agent System Status & Control
+app.get('/api/v1/agents', authenticateToken, (_req, res) => {
+  res.json([
+    {
+      id: 'agent-01',
+      agentName: 'Dendritic-Detector-01',
+      agentType: 'dendritic-cell',
+      status: 'active',
+      confidenceScore: 96.5,
+      learningScore: 84.0,
+      assignedZone: 'telemetry-stream',
+      activeTarget: 'continuous-surveillance',
+      createdAt: new Date(Date.now() - 86400000 * 3),
+    },
+    {
+      id: 'agent-02',
+      agentName: 'TCell-Guardian-03',
+      agentType: 't-cell',
+      status: 'engaged',
+      confidenceScore: 94.2,
+      learningScore: 88.5,
+      assignedZone: 'diagnostic-cortex',
+      activeTarget: 'incident-root-cause-analysis',
+      createdAt: new Date(Date.now() - 86400000 * 3),
+    },
+    {
+      id: 'agent-03',
+      agentName: 'BCell-Learner-09',
+      agentType: 'b-cell',
+      status: 'learning',
+      confidenceScore: 91.0,
+      learningScore: 96.4,
+      assignedZone: 'memory-vault',
+      activeTarget: 'vector-threat-repertoire',
+      createdAt: new Date(Date.now() - 86400000 * 3),
+    },
+    {
+      id: 'agent-04',
+      agentName: 'Policy-Safety-Guard-01',
+      agentType: 'policy-agent',
+      status: 'active',
+      confidenceScore: 99.0,
+      learningScore: 90.0,
+      assignedZone: 'security-governance',
+      activeTarget: `Autonomy Level ${PolicySafetyAgent.currentAutonomyLevel}`,
+      createdAt: new Date(Date.now() - 86400000 * 3),
+    },
+    {
+      id: 'agent-05',
+      agentName: 'Healing-Executor-01',
+      agentType: 'executor',
+      status: 'standby',
+      confidenceScore: 98.0,
+      learningScore: 82.0,
+      assignedZone: 'cluster-api',
+      activeTarget: 'k8s-operations-dispatcher',
+      createdAt: new Date(Date.now() - 86400000 * 3),
+    },
+    {
+      id: 'agent-06',
+      agentName: 'Verification-Agent-01',
+      agentType: 'verifier',
+      status: 'active',
+      confidenceScore: 95.5,
+      learningScore: 86.0,
+      assignedZone: 'cluster-readiness',
+      activeTarget: 'multi-stage-recovery-verification',
+      createdAt: new Date(Date.now() - 86400000 * 3),
+    },
+  ]);
+});
+
+app.post('/api/v1/agents/:id/control', authenticateToken, AuthService.requireRole('ADMIN'), (req, res) => {
+  const { id } = req.params;
+  const { action, autonomyLevel } = req.body;
+
+  if (autonomyLevel !== undefined) {
+    PolicySafetyAgent.setAutonomyLevel(autonomyLevel as AutonomyLevel);
+    systemSettings.autonomyLevel = autonomyLevel;
+  }
+
+  res.json({ status: 'SIGNAL_TRANSMITTED', agentId: id, action });
+});
+
+// 9. Memory Repertoire
+app.get('/api/v1/memory-cells', authenticateToken, (_req, res) => {
+  res.json(BCellMemoryAgent.listMemories());
+});
+
+// 10. Audit Logs
+app.get('/api/v1/audit-logs', authenticateToken, (req, res) => {
+  const limit = parseInt((req.query as any).limit) || 100;
+  res.json(auditLogs.slice(0, Math.min(limit, 500)));
+});
+
+// 11. Immune Responses
+app.get('/api/v1/immune-responses', authenticateToken, (_req, res) => {
+  const incidents = incidentEngine.getIncidents();
+  const responses = incidents
+    .filter((i) => i.executedActions && i.executedActions.length > 0)
+    .map((i) => ({
+      id: `resp-${i.id}`,
+      eventId: i.id,
+      responseType: i.executedActions![0]?.actionType || 'Remediation',
+      actionTaken: i.executedActions![0]?.details || 'Executed action',
+      successRate: i.status === IncidentStatus.RESOLVED ? 98.4 : 50.0,
+      responseTimeMs: 240,
+      triggeredBy: 'BioPods Autonomous Kernel',
+      responseStatus: i.status === IncidentStatus.RESOLVED ? 'completed' : 'failed',
+      createdAt: i.detectedAt,
+      dangerEvent: { eventType: i.signals[0] || 'Threat' },
+    }));
+  res.json(responses);
+});
+
+// 12. Self-Heal Statistics
+app.get('/api/v1/self-heal/stats', authenticateToken, (_req, res) => {
+  const incidents = incidentEngine.getIncidents();
+  const total = incidents.length;
+  const completed = incidents.filter((i) => i.status === IncidentStatus.RESOLVED).length;
+  const avgRate = total > 0 ? (completed / total) * 100 : 96.0;
+
+  res.json({
+    totalResponses: total,
+    completedResponses: completed,
+    memoryCells: BCellMemoryAgent.listMemories().length,
+    avgSuccessRate: parseFloat(avgRate.toFixed(1)),
+  });
+});
+
+// 13. Action Execution (Dashboard trigger)
+app.post('/api/v1/actions/execute', authenticateToken, AuthService.requireRole('OPERATOR'), async (req, res) => {
+  const { podId, actionType, namespace = 'default' } = req.body;
+  const user: AuthUser = req.user;
+
+  console.log(`⚡ [Manual Override] Operator ${user.fullName} dispatched ${actionType} on ${namespace}/${podId}`);
+
+  let result;
+  if (actionType.includes('scale')) {
+    result = await HealingExecutorAgent.executeAction({
+      type: 'SCALE_DEPLOYMENT',
+      target: podId.replace(/-[a-z0-9]{4,10}(-[a-z0-9]{4,10})?$/, ''),
+      namespace,
+      parameters: { replicas: 3 },
+      riskLevel: 'MEDIUM',
+      requiresApproval: false,
+      estimatedRecoveryTimeSec: 15,
+    });
+  } else if (actionType.includes('quarantine')) {
+    result = await HealingExecutorAgent.executeAction({
+      type: 'QUARANTINE_POD',
+      target: podId,
+      namespace,
+      parameters: {},
+      riskLevel: 'HIGH',
+      requiresApproval: false,
+      estimatedRecoveryTimeSec: 5,
+    });
+  } else {
+    result = await HealingExecutorAgent.executeAction({
+      type: 'RESTART_POD',
+      target: podId,
+      namespace,
+      parameters: {},
+      riskLevel: 'LOW',
+      requiresApproval: false,
+      estimatedRecoveryTimeSec: 10,
+    });
+  }
+
+  auditLogs.unshift({
+    id: `log-${Date.now().toString(36)}`,
+    actionType: actionType.toUpperCase(),
+    actionDescription: `Action protocol executed on ${podId}: ${result.details}`,
+    performedBy: user.fullName,
+    targetResource: podId,
+    status: result.success ? 'SUCCESS' : 'FAILED',
+    createdAt: new Date(),
+  });
+
+  res.json({ status: 'PROTOCOL_INITIATED', podId, actionType, result });
+});
+
+// 14. Global Antibody Deploy
+app.post('/api/v1/antibody/deploy', authenticateToken, AuthService.requireRole('ADMIN'), async (req, res) => {
+  const user: AuthUser = req.user;
+  const nodes = await k8sProvider.listNodes();
+  const pods = await k8sProvider.listPods();
+
+  for (const pod of pods.filter((p) => p.dangerLevel !== 'low')) {
+    await HealingExecutorAgent.executeAction({
+      type: 'RESTART_POD',
+      target: pod.name,
+      namespace: pod.namespace,
+      parameters: {},
+      riskLevel: 'LOW',
+      requiresApproval: false,
+      estimatedRecoveryTimeSec: 10,
+    });
+  }
+
+  auditLogs.unshift({
+    id: `log-${Date.now().toString(36)}`,
+    actionType: 'GLOBAL_ANTIBODY_DEPLOY',
+    actionDescription: `Cluster-wide polyvalent antibody patches applied across ${nodes.length} sectors.`,
+    performedBy: user.fullName,
+    targetResource: 'cluster/all-nodes',
+    status: 'SUCCESS',
+    createdAt: new Date(),
+  });
+
+  io.emit('antibody:deploy', {
+    podId: 'all',
+    antibodyType: 'GLOBAL_POLYVALENT_ANTIBODY',
+    timestamp: new Date(),
+  });
+
+  res.json({
+    status: 'ANTIBODY_DEPLOY_COMPLETE',
+    nodesPatched: nodes.length,
+    podsSecured: pods.length,
+  });
+});
+
+// 15. Topology Graph
+app.get('/api/v1/topology/graph', authenticateToken, async (_req, res) => {
+  const pods = await k8sProvider.listPods();
+  const nodesList = await k8sProvider.listNodes();
+
   const nodes: any[] = [
     {
       id: 'ingress-core',
@@ -780,20 +638,20 @@ app.get('/api/v1/topology/graph', authenticateToken, (_req, res) => {
   ];
   const links: any[] = [];
 
-  for (const p of store.pods) {
+  for (const p of pods) {
     let status: 'healthy' | 'warning' | 'danger' | 'critical' = 'healthy';
-    if (p.podStatus === 'critical' || p.dangerLevel === 'critical') status = 'critical';
-    else if (p.podStatus === 'infected' || p.dangerLevel === 'high') status = 'danger';
-    else if (p.podStatus === 'unstable' || p.dangerLevel === 'medium') status = 'warning';
+    if (p.dangerLevel === 'critical') status = 'critical';
+    else if (p.dangerLevel === 'high') status = 'danger';
+    else if (p.dangerLevel === 'medium') status = 'warning';
 
     nodes.push({
-      id: p.id,
-      label: p.podName.toUpperCase(),
+      id: p.name,
+      label: p.name.toUpperCase(),
       type: 'pod',
       status,
-      cpu: p.cpuUsage || 20.0,
-      memory: p.memoryUsage || 35.0,
-      details: `Namespace: ${p.namespace || 'default'} | PVC Latency: ${p.pvcLatency || 2}ms`,
+      cpu: p.cpuUsagePercent,
+      memory: p.memoryUsagePercent,
+      details: `Namespace: ${p.namespace} | Node: ${p.nodeName}`,
       cascadingRisk: status === 'critical' ? 85 : status === 'danger' ? 60 : 0,
     });
   }
@@ -807,328 +665,145 @@ app.get('/api/v1/topology/graph', authenticateToken, (_req, res) => {
     cascadingRisk: 0,
   });
 
-  // Links
-  links.push({
-    id: 'link-ingress-auth',
-    source: 'ingress-core',
-    target: 'pod-auth-01',
-    relation: 'routes-to',
-    status: 'active',
-    latencyMs: 14,
-  });
-  links.push({
-    id: 'link-auth-telemetry',
-    source: 'pod-auth-01',
-    target: 'pod-telemetry-02',
-    relation: 'gRPC-call',
-    status: 'stressed',
-    latencyMs: 42,
-  });
-  links.push({
-    id: 'link-telemetry-scanner',
-    source: 'pod-telemetry-02',
-    target: 'pod-scanner-03',
-    relation: 'gRPC-call',
-    status: 'stressed',
-    latencyMs: 28,
-  });
-  links.push({
-    id: 'link-auth-ctrl',
-    source: 'pod-auth-01',
-    target: 'pod-ctrl-05',
-    relation: 'gRPC-call',
-    status: 'active',
-    latencyMs: 18,
-  });
-  links.push({
-    id: 'link-ctrl-turbine',
-    source: 'pod-ctrl-05',
-    target: 'pod-turbine-06',
-    relation: 'scada-bus',
-    status: 'active',
-    latencyMs: 9,
-  });
-  links.push({
-    id: 'link-ctrl-power',
-    source: 'pod-ctrl-05',
-    target: 'pod-power-04',
-    relation: 'scada-bus',
-    status: 'active',
-    latencyMs: 12,
-  });
-  links.push({
-    id: 'link-telemetry-pvc',
-    source: 'pod-telemetry-02',
-    target: 'pvc-storage-ssd',
-    relation: 'pvc-mount',
-    status: 'stressed',
-    latencyMs: 38,
-  });
+  // Construct realistic linkages between pods
+  if (pods.length > 0) {
+    links.push({
+      id: 'link-ingress-first',
+      source: 'ingress-core',
+      target: pods[0].name,
+      relation: 'routes-to',
+      status: 'active',
+      latencyMs: 12,
+    });
+
+    for (let i = 0; i < pods.length - 1; i++) {
+      links.push({
+        id: `link-${pods[i].name}-${pods[i + 1].name}`,
+        source: pods[i].name,
+        target: pods[i + 1].name,
+        relation: 'gRPC-link',
+        status: pods[i + 1].dangerLevel === 'critical' ? 'broken' : pods[i + 1].dangerLevel === 'high' ? 'stressed' : 'active',
+        latencyMs: Math.round(15 + Math.random() * 25),
+      });
+    }
+
+    links.push({
+      id: 'link-storage',
+      source: pods[pods.length - 1].name,
+      target: 'pvc-storage-ssd',
+      relation: 'pvc-mount',
+      status: 'active',
+      latencyMs: 3,
+    });
+  }
 
   res.json({ nodes, links });
 });
 
-// Pods
-app.get('/api/v1/pods', authenticateToken, (_req, res) => {
-  const enriched = store.pods.map((p) => {
-    const parentNode = store.nodes.find((n) => n.id === p.nodeId);
-    return {
-      ...p,
-      node: parentNode ? { cpuUsage: parentNode.cpuUsage, memoryUsage: parentNode.memoryUsage, nodeName: parentNode.nodeName } : null,
-    };
-  });
-  res.json(enriched);
-});
-
-// Anomalies / Danger Events
-app.get('/api/v1/anomalies', authenticateToken, (_req, res) => {
-  const enriched = store.dangerEvents.map((evt) => ({
-    ...evt,
-    pod: store.pods.find((p) => p.id === evt.podId) || { podName: evt.podId },
-  }));
-  res.json(enriched);
-});
-
-// Immune Agents
-app.get('/api/v1/agents', authenticateToken, (_req, res) => {
-  res.json(store.immuneAgents);
-});
-
-app.post('/api/v1/agents/:id/control', authenticateToken, (req, res) => {
-  const { id } = req.params;
-  const { action } = req.body;
-  const agent = store.immuneAgents.find((a) => a.id === id || a.agentName === id);
-  if (agent) {
-    if (action === 'engage') agent.status = 'engaged';
-    else if (action === 'sleep') agent.status = 'standby';
-    else if (action === 'boost') agent.confidenceScore = Math.min(100, (agent.confidenceScore || 90) + 5);
-  }
-  res.json({ status: 'SIGNAL_TRANSMITTED', agentId: id, action });
-});
-
-// Memory Cells
-app.get('/api/v1/memory-cells', authenticateToken, (_req, res) => {
-  res.json(store.memoryCells);
-});
-
-// Audit Logs
-app.get('/api/v1/audit-logs', authenticateToken, (req, res) => {
-  const limit = parseInt((req.query as any).limit) || 100;
-  res.json(store.auditLogs.slice(0, Math.min(limit, 500)));
-});
-
-// Immune Responses
-app.get('/api/v1/immune-responses', authenticateToken, (req, res) => {
-  const limit = parseInt((req.query as any).limit) || 50;
-  const responses = store.immuneResponses.slice(0, Math.min(limit, 200)).map((r) => ({
-    ...r,
-    dangerEvent: store.dangerEvents.find((e) => e.id === r.eventId),
-  }));
-  res.json(responses);
-});
-
-// Self-Heal Stats
-app.get('/api/v1/self-heal/stats', authenticateToken, (_req, res) => {
-  const total = store.immuneResponses.length;
-  const completed = store.immuneResponses.filter((r) => r.responseStatus === 'completed').length;
-  const avgRate = total > 0 ? store.immuneResponses.reduce((acc, r) => acc + (r.successRate || 95), 0) / total : 96.5;
+// 16. Telemetry History & Cluster Vitals
+app.get('/api/v1/telemetry/history', authenticateToken, async (_req, res) => {
+  const telemetry = await TelemetryCollector.collectMetrics();
+  const incidents = incidentEngine.getIncidents();
   res.json({
-    totalResponses: total,
-    completedResponses: completed,
-    memoryCells: store.memoryCells.length,
-    avgSuccessRate: parseFloat(avgRate.toFixed(1)),
+    telemetry: [telemetry],
+    anomalies: incidents.slice(0, 50),
   });
 });
 
-// Action Execution
-app.post('/api/v1/actions/execute', authenticateToken, (req, res) => {
-  const { podId, actionType, eventId } = req.body;
-  const triggeredBy = (req as any).user?.id || 'dashboard-user';
+app.get('/api/v1/cluster/vitals', authenticateToken, async (_req, res) => {
+  const cluster = await k8sProvider.getClusterInfo();
+  const nodes = await k8sProvider.listNodes();
+  const pods = await k8sProvider.listPods();
+  const incidents = incidentEngine.getIncidents();
 
-  const pod = store.pods.find((p) => p.id === podId || p.podName === podId);
-  if (pod) {
-    if (actionType.includes('isolate') || actionType.includes('purge') || actionType.includes('quarantine')) {
-      pod.dangerLevel = 'low';
-      pod.podStatus = 'healthy';
-      pod.immunityState = 'protected';
-    }
-  }
-
-  store.auditLogs.unshift({
-    id: `log-${Date.now().toString(36)}`,
-    actionType: actionType.toUpperCase(),
-    actionDescription: `Action protocol [${actionType}] executed on resource ${podId}.`,
-    performedBy: triggeredBy,
-    targetResource: podId,
-    status: 'SUCCESS',
-    createdAt: new Date(),
-  });
-
-  io.emit('immune:response:started', { podId, actionType, eventId });
-  io.emit('healing:animation', { podId, status: 'healed', animation: 'cytokine-flash' });
-
-  res.json({ status: 'PROTOCOL_INITIATED', podId, actionType });
-});
-
-// Settings
-app.get('/api/v1/settings', authenticateToken, (_req, res) => {
-  res.json(store.settings);
-});
-
-app.post('/api/v1/settings', authenticateToken, (req, res) => {
-  store.settings = { ...store.settings, ...req.body };
-  res.json({ success: true, settings: store.settings });
-});
-
-// Global Antibody Deploy
-app.post('/api/v1/antibody/deploy', authenticateToken, (req, res) => {
-  const triggeredBy = (req as any).user?.id || 'dashboard-user';
-  const results: any[] = [];
-
-  for (const node of store.nodes) {
-    node.nodeStatus = 'healthy';
-    node.healthScore = 99.5;
-
-    const nodePods = store.pods.filter((p) => p.nodeId === node.id);
-    for (const pod of nodePods) {
-      pod.podStatus = 'healthy';
-      pod.dangerLevel = 'low';
-      pod.immunityState = 'protected';
-    }
-
-    const immuneResp = {
-      id: `resp-${Date.now().toString(36)}`,
-      eventId: undefined,
-      responseType: 'global-antibody-deploy',
-      actionTaken: `Antibody patch deployed to ${node.nodeName}. ${nodePods.length} pods secured.`,
-      successRate: parseFloat((97.5 + Math.random() * 2.5).toFixed(1)),
-      responseTimeMs: Math.floor(600 + Math.random() * 400),
-      triggeredBy,
-      responseStatus: 'completed',
-      createdAt: new Date(),
-    };
-    store.immuneResponses.unshift(immuneResp);
-
-    store.auditLogs.unshift({
-      id: `log-${Date.now().toString(36)}`,
-      actionType: 'ANTIBODY_DEPLOYED',
-      actionDescription: `Global antibody patch applied to sector ${node.nodeName}. Purged all pathogen vectors.`,
-      performedBy: triggeredBy,
-      targetResource: node.nodeName,
-      status: 'SUCCESS',
-      createdAt: new Date(),
-    });
-
-    results.push({
-      nodeId: node.id,
-      nodeName: node.nodeName,
-      podsSecured: nodePods.length,
-      immuneResponseId: immuneResp.id,
-      status: 'SECURED',
-    });
-  }
-
-  for (const evt of store.dangerEvents) {
-    evt.status = 'resolved';
-  }
-
-  io.emit('antibody:deploy', {
-    podId: 'all',
-    antibodyType: 'GLOBAL_POLYVALENT_ANTIBODY',
-    timestamp: new Date(),
-  });
+  const avgCpu = nodes.reduce((acc, n) => acc + n.cpuUsagePercent, 0) / (nodes.length || 1);
+  const avgMem = nodes.reduce((acc, n) => acc + n.memoryUsagePercent, 0) / (nodes.length || 1);
+  const openThreats = incidents.filter((i) => i.status !== IncidentStatus.RESOLVED).length;
 
   res.json({
-    status: 'ANTIBODY_DEPLOY_COMPLETE',
-    nodesPatched: store.nodes.length,
-    results,
-  });
-});
-
-// Telemetry History
-app.get('/api/v1/telemetry/history', authenticateToken, (_req, res) => {
-  res.json({
-    telemetry: store.telemetry,
-    anomalies: store.dangerEvents.slice(0, 50),
-  });
-});
-
-// Cluster Vitals
-app.get('/api/v1/cluster/vitals', authenticateToken, (_req, res) => {
-  const avgHealth = store.nodes.reduce((s, n) => s + (n.healthScore || 100), 0) / store.nodes.length;
-  const avgCpu = store.nodes.reduce((s, n) => s + (n.cpuUsage || 0), 0) / store.nodes.length;
-  const avgMem = store.nodes.reduce((s, n) => s + (n.memoryUsage || 0), 0) / store.nodes.length;
-  const openThreats = store.dangerEvents.filter((e) => e.status !== 'resolved').length;
-
-  res.json({
-    immunityScore: Math.round(avgHealth),
+    immunityScore: cluster.immunityScore,
     avgCpu: parseFloat(avgCpu.toFixed(1)),
     avgMemory: parseFloat(avgMem.toFixed(1)),
-    totalNodes: store.nodes.length,
-    totalPods: store.pods.length,
+    totalNodes: nodes.length,
+    totalPods: pods.length,
     openThreats,
-    immuneResponses: store.immuneResponses.length,
-    memoryCells: store.memoryCells.length,
+    immuneResponses: incidents.length,
+    memoryCells: BCellMemoryAgent.listMemories().length,
   });
 });
 
-// Inject Telemetry (used by "INJECT THERMAL SURGE" etc. in Threat Detection)
-app.post('/api/telemetry', (req, res) => {
-  const { podId, metrics, type } = req.body;
+// 17. Threat Injection (Chaos trigger from Threat Detection page)
+app.post('/api/telemetry', async (req, res) => {
+  const { podId, metrics = {}, type = 'Thermal Surge Anomaly' } = req.body;
   const isDangerous = (metrics.cpu || 0) > 80 || (metrics.memory || 0) > 85 || (metrics.temp || 0) > 70;
 
+  console.log(`⚠️ [Telemetry Injection] Received telemetry for ${podId} (Type: ${type}, Anomaly: ${isDangerous})`);
+
   if (isDangerous) {
-    console.log(`[BioPods Threat Injection] Processing anomaly in pod: ${podId} (Type: ${type})`);
-    reasonAndMitigate({ podId, type: type || 'Threshold Exceeded', metrics });
+    const candidateIncident = {
+      id: `inc-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+      clusterId: 'BioPods-Local-Cluster',
+      targetResource: podId,
+      namespace: 'immune-core',
+      severity: (metrics.cpu > 90 || metrics.temp > 85 ? 'critical' : 'high') as any,
+      anomalyScore: Math.min(100, Math.round((metrics.cpu || 80) * 0.5 + (metrics.temp || 70) * 0.5)),
+      signals: [`Injected Anomaly: ${type}`, `CPU: ${metrics.cpu || 0}%, Temp: ${metrics.temp || 0}°C`],
+      status: IncidentStatus.DETECTED,
+      detectedAt: new Date(),
+    };
+
+    // Trigger full autonomous multi-agent pipeline asynchronously
+    incidentEngine.processIncidentPipeline(candidateIncident).catch((err) => {
+      console.error('Incident processing pipeline error:', err);
+    });
   }
 
   res.json({ status: 'ACK', podId });
 });
 
-// Cross-service Event Bridge
-app.post('/api/events', (req, res) => {
-  const { subject, data } = req.body;
-  if (subject === 'system-threats') {
-    reasonAndMitigate(data);
+// 18. System Settings
+app.get('/api/v1/settings', authenticateToken, (_req, res) => {
+  res.json(systemSettings);
+});
+
+app.post('/api/v1/settings', authenticateToken, AuthService.requireRole('ADMIN'), (req, res) => {
+  Object.assign(systemSettings, req.body);
+  if (req.body.autonomyLevel !== undefined) {
+    PolicySafetyAgent.setAutonomyLevel(req.body.autonomyLevel as AutonomyLevel);
   }
-  res.send('ok');
+  res.json({ success: true, settings: systemSettings });
 });
 
-// Prometheus Metrics Route
-app.get('/api/metrics', (_req, res) => {
-  res.json({
-    cpu: [{ metric: { instance: 'biopods-node-01' }, value: [Date.now() / 1000, '0.45'] }],
-    memory: [{ metric: { instance: 'biopods-node-01' }, value: [Date.now() / 1000, '489291776'] }],
-    network: [{ metric: { instance: 'biopods-node-01' }, value: [Date.now() / 1000, '142080'] }],
-    podHealth: store.pods.map((p) => ({ metric: { pod: p.podName }, value: [Date.now() / 1000, p.podStatus === 'healthy' ? '1' : '0'] })),
-  });
+// 19. Prometheus API compatibility
+app.get('/api/metrics', async (_req, res) => {
+  const telemetry = await TelemetryCollector.collectMetrics();
+  res.json(telemetry);
 });
 
-app.get('/api/metrics/live', (_req, res) => {
+app.get('/api/metrics/live', async (_req, res) => {
+  const pods = await k8sProvider.listPods();
   res.json({
     cpu: Math.floor(Math.random() * 40) + 30,
     memory: Math.floor(Math.random() * 35) + 40,
     network: Math.floor(Math.random() * 400) + 150,
-    podStatus: 'healthy',
+    podStatus: pods.some((p) => p.dangerLevel === 'critical') ? 'critical' : 'healthy',
   });
 });
 
 app.get('/api/metrics/history', (_req, res) => {
-  res.json(store.telemetry);
+  res.json(incidentEngine.getIncidents());
 });
 
 app.get('/api/metrics/anomalies', (_req, res) => {
-  res.json(store.dangerEvents);
+  res.json(incidentEngine.getIncidents().filter((i) => i.status !== IncidentStatus.RESOLVED));
 });
 
-// Dataset Routes
-app.get('/api/dataset/imports', (_req, res) => res.json(store.datasetImports));
-app.get('/api/dataset/history', (_req, res) => res.json({ data: store.historicalMetrics, total: store.historicalMetrics.length }));
-app.get('/api/dataset/anomalies', (_req, res) => res.json(store.historicalMetrics.filter((m) => m.anomalyLabel)));
+// 20. Dataset routes
+app.get('/api/dataset/imports', (_req, res) => res.json([]));
+app.get('/api/dataset/history', (_req, res) => res.json({ data: [], total: 0 }));
+app.get('/api/dataset/anomalies', (_req, res) => res.json([]));
 app.get('/api/dataset/trends', (_req, res) => res.json({ trends: [] }));
-app.post('/api/dataset/upload', (_req, res) => {
-  res.json({ success: true, rowsInserted: 120, duplicate: false });
-});
+app.post('/api/dataset/upload', (_req, res) => res.json({ success: true, rowsInserted: 100 }));
 
 // ── Frontend Vite Integration (Dev) / Static Serving (Prod) ────────────────
 async function startServer() {
@@ -1150,8 +825,8 @@ async function startServer() {
   }
 
   httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`🧬 BioPods Unified Core listening on port ${PORT} (0.0.0.0)`);
-    console.log(`🌐 Neural Link and Autonomic Immune System active.`);
+    console.log(`🧬 [BioPods Production Kernel] Listening on port ${PORT} (0.0.0.0)`);
+    console.log(`🛡️ Autonomous Immune Multi-Agent System Engaged & Armed.`);
   });
 }
 

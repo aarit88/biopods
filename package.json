@@ -7,9 +7,11 @@
     "dev": "tsx server.ts",
     "build": "vite build",
     "lint": "echo 'No lint errors'",
+    "test": "tsx tests/policy-agent.test.ts && tsx tests/k8s-provider.test.ts && tsx tests/incident-pipeline.test.ts",
     "start": "tsx server.ts"
   },
   "dependencies": {
+    "@kubernetes/client-node": "^2.0.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "axios": "^1.16.1",
@@ -31,7 +33,8 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.3",
     "tailwind-merge": "^3.5.0",
-    "three": "^0.184.0"
+    "three": "^0.184.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
