@@ -10,7 +10,7 @@ interface ReasoningStep {
   timestamp: string;
 }
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : '');
 
 export const ReasoningTerminal: React.FC = () => {
   const [logs, setLogs] = useState<ReasoningStep[]>([]);

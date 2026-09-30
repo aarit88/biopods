@@ -75,7 +75,7 @@ export const ThreatDetection: React.FC = () => {
     };
     const scenario = scenarios[threatType] || scenarios.thermal;
     try {
-      await axios.post('http://localhost:5000/api/telemetry', scenario);
+      await axios.post('/api/telemetry', scenario);
     } catch (e) {
       console.error("Injection failed", e);
     }
